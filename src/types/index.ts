@@ -4,7 +4,7 @@ export interface User {
   email: string;
   phone: string;
   avatar_url: string | null;
-  role: "parent";
+  role: "student";
 }
 
 export interface Student {
@@ -24,8 +24,7 @@ export interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  parentUuid: string | null;
-  selectedStudentUuid: string | null;
+  studentUuid: string | null;
 }
 
 export interface LoginPayload {
@@ -37,7 +36,40 @@ export interface LoginResponse {
   user: User;
   students: Student[];
   token: string;
-  parent_uuid?: string;
+  refresh_token?: string;
+  token_type?: string;
+  expires_in?: number;
+  student_uuid?: string;
+}
+
+export interface ProfileInfo {
+  first_name?: string;
+  father_name?: string;
+  mother_name?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+}
+
+export interface AssignmentItem {
+  id: number;
+  title: string;
+  description: string;
+  subject_name: string | null;
+  assigned_date: string;
+  due_date: string | null;
+  status: string;
+  attachment_url: string | null;
+}
+
+export interface ExamScheduleItem {
+  id: number;
+  exam_name: string;
+  subject_name: string | null;
+  exam_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  room: string | null;
 }
 
 export interface ApiResponse<T> {
@@ -270,4 +302,13 @@ export interface TransportData {
 export interface TransportDashboardData {
    transport: TransportData | null;
    stops: TransportStop[];
+}
+
+export interface DashboardHighlights {
+  timetable: TimetableData;
+  homeworkDueToday: number;
+  upcomingExam: ExamScheduleItem | null;
+  unreadNotices: number;
+  busEnabled: boolean;
+  busActive: boolean;
 }

@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useAuthStore } from "@/store/auth.store";
-import { fetchLeaveRequestDetail } from "@/services/api";
+import { fetchLeaveRequestDetail, getErrorMessage } from "@/services/api";
 import type { LeaveRequest } from "@/types";
 import { OfflineState } from "@/components/ui/OfflineState";
 
@@ -35,31 +35,28 @@ function formatDateShort(dateStr: string): string {
 
 export default function LeaveDetailScreen() {
   const params = useLocalSearchParams<Record<string, string>>();
-  const parentUuid = useAuthStore((s) => s.parentUuid);
-  const selectedStudentUuid = useAuthStore((s) => s.selectedStudentUuid);
+  const studentUuid = useAuthStore((s) => s.studentUuid) ?? "";
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<LeaveRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const id = params.id ? Number(params.id) : null;
-  const childUuid = params.childUuid ?? selectedStudentUuid ?? "";
 
   const loadDetail = useCallback(async () => {
-    if (!parentUuid || !childUuid || !id) {
+    if (!studentUuid || !id) {
       setLoading(false);
       return;
     }
     try {
       setError(null);
-      const data = await fetchLeaveRequestDetail(parentUuid, childUuid, id);
+      const data = await fetchLeaveRequestDetail(studentUuid, id);
       setDetail(data);
-    } catch (err: any) {
-      console.error("[Leave Detail] load error:", err);
-      setError(err?.response?.data?.message ?? "Failed to load leave details");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [parentUuid, childUuid, id]);
+  }, [studentUuid, id]);
 
   useEffect(() => {
     loadDetail();
@@ -103,14 +100,13 @@ export default function LeaveDetailScreen() {
               activeOpacity={0.7}
               onPress={() =>
                 router.push({
-                  pathname: "/leave/apply" as any,
+                  pathname: "/leave/apply",
                   params: {
                     editId: String(detail.id),
                     leaveType: detail.leave_type,
                     fromDate: detail.from_date?.split("T")[0],
                     toDate: detail.to_date?.split("T")[0],
                     reason: detail.reason,
-                    childUuid: childUuid ?? "",
                   },
                 })
               }
@@ -183,7 +179,7 @@ export default function LeaveDetailScreen() {
                   className={`flex-row items-center px-4 py-3.5 ${index < arr.length - 1 ? "border-b border-slate-50" : ""}`}
                 >
                   <View className="w-8 h-8 bg-slate-50 rounded-lg items-center justify-center mr-3">
-                    <Ionicons name={item.icon as any} size={16} color="#64748B" />
+                    <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={16} color="#64748B" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-slate-400 text-xs">{item.label}</Text>

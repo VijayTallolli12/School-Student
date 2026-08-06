@@ -1,7 +1,12 @@
-import { View, TouchableOpacity, Text } from "react-native";
+/**
+ * BottomTabBar — Design System. Premium tab bar with an active "pill" treatment,
+ * token colors, and proper safe-area + accessibility support.
+ */
+import { View, Text, Pressable, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useBrandingStore } from "@/store/branding.store";
+import { useTheme } from "@/design-system/theme";
+import { spacing, radius } from "@/design-system";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
 const TAB_ICONS: Record<
@@ -14,17 +19,23 @@ const TAB_ICONS: Record<
 
 export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const primaryColor = useBrandingStore((s) => s.theme.primary);
+  const { colors } = useTheme();
 
   return (
-    <View style={{ paddingBottom: Math.max(insets.bottom, 0), backgroundColor: "#FFFFFF" }}>
-      <View style={{ height: 0.5, backgroundColor: "#E2E8F0" }} />
-      <View
-        style={{
-          flexDirection: "row",
-          height: 52,
-        }}
-      >
+    <View
+      style={{
+        paddingBottom: Math.max(insets.bottom, spacing.xs),
+        backgroundColor: colors.card,
+        borderTopWidth: 1,
+        borderTopColor: colors.divider,
+        shadowColor: "#131022",
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+        elevation: 8,
+      }}
+    >
+      <View style={{ flexDirection: "row", height: 62 }}>
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
           const icons = TAB_ICONS[route.name];
@@ -48,35 +59,50 @@ export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarPro
             }
           };
 
+          const tint = isFocused ? colors.brand : colors.textTertiary;
+          const row: StyleProp<ViewStyle> = {
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 48,
+          };
+
           return (
-            <TouchableOpacity
+            <Pressable
               key={route.key}
               onPress={onPress}
-              activeOpacity={0.6}
-              style={{
-                flex: 1,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isFocused }}
+              accessibilityLabel={label}
+              hitSlop={4}
+              style={row}
             >
-              <View style={{ position: "relative", alignItems: "center", justifyContent: "center" }}>
-                <Ionicons
-                  name={iconName}
-                  size={isFocused ? 22 : 21}
-                  color={isFocused ? primaryColor : "#94A3B8"}
-                />
+              <View
+                style={{
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radius.full,
+                  backgroundColor: isFocused ? `${colors.brand}14` : "transparent",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform: [{ translateY: isFocused ? -1 : 0 }],
+                  minWidth: 64,
+                }}
+              >
+                <Ionicons name={iconName} size={22} color={tint} />
               </View>
               <Text
                 style={{
-                  fontSize: 10,
-                  fontWeight: isFocused ? "600" : "400",
-                  color: isFocused ? primaryColor : "#94A3B8",
-                  marginTop: 2,
+                  fontSize: 11,
+                  lineHeight: 14,
+                  fontWeight: isFocused ? "700" : "500",
+                  color: tint,
+                  marginTop: 3,
                 }}
               >
                 {label}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>

@@ -2,12 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { useAuthStore } from "@/store/auth.store";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { fetchLeaveRequests } from "@/services/api";
+import { fetchLeaveRequests, getErrorMessage } from "@/services/api";
 import type { LeaveRequest } from "@/types";
 import { OfflineState } from "@/components/ui/OfflineState";
 
@@ -23,10 +22,8 @@ function formatDate(dateStr: string): string {
 }
 
 export default function LeaveListScreen() {
-  const parentUuid = useAuthStore((s) => s.parentUuid);
   const students = useAuthStore((s) => s.students);
-  const selectedStudentUuid = useAuthStore((s) => s.selectedStudentUuid);
-  const childUuid = selectedStudentUuid ?? students?.[0]?.uuid;
+  const studentUuid = useAuthStore((s) => s.studentUuid) ?? students?.[0]?.uuid;
 
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,23 +31,22 @@ export default function LeaveListScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const loadLeaveRequests = useCallback(async () => {
-    if (!parentUuid || !childUuid) {
+    if (!studentUuid) {
       setLoading(false);
       setRefreshing(false);
       return;
     }
     try {
       setError(null);
-      const result = await fetchLeaveRequests(parentUuid, childUuid);
+      const result = await fetchLeaveRequests(studentUuid);
       setRequests(result);
-    } catch (err: any) {
-      console.error("[Leave] load error:", err);
-      setError(err?.response?.data?.message ?? "Failed to load leave requests");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [parentUuid, childUuid]);
+  }, [studentUuid]);
 
   useEffect(() => {
     loadLeaveRequests();
@@ -86,7 +82,7 @@ export default function LeaveListScreen() {
           <TouchableOpacity
             className="flex-row items-center bg-primary-600 px-3.5 py-2 rounded-xl"
             activeOpacity={0.7}
-            onPress={() => router.push("/leave/apply" as any)}
+            onPress={() => router.push("/leave/apply" as Href)}
           >
             <Ionicons name="add" size={18} color="#FFFFFF" />
             <Text className="text-white text-xs font-bold ml-1">Apply</Text>
@@ -114,7 +110,7 @@ export default function LeaveListScreen() {
             title="No Leave Requests"
             description="You haven't submitted any leave requests yet. Tap Apply to submit one."
             actionLabel="Apply for Leave"
-            onAction={() => router.push("/leave/apply" as any)}
+            onAction={() => router.push("/leave/apply" as Href)}
           />
         ) : (
           <>
@@ -142,11 +138,10 @@ export default function LeaveListScreen() {
                     activeOpacity={0.7}
                     onPress={() =>
                       router.push({
-                        pathname: "/leave/[id]" as any,
+                        pathname: "/leave/[id]",
                         params: {
                           id: String(req.id),
                           status: req.status,
-                          childUuid: childUuid ?? "",
                         },
                       })
                     }
@@ -155,7 +150,7 @@ export default function LeaveListScreen() {
                       <View className="px-4 py-3.5">
                         <View className="flex-row items-start">
                           <View className={`w-9 h-9 ${ss.bg} rounded-xl items-center justify-center`}>
-                            <Ionicons name={ss.icon as any} size={18} color={ss.color} />
+                            <Ionicons name={ss.icon as keyof typeof Ionicons.glyphMap} size={18} color={ss.color} />
                           </View>
                           <View className="flex-1 ml-3">
                             <View className="flex-row items-center justify-between">

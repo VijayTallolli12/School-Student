@@ -2,12 +2,11 @@ import { useState, useCallback } from "react";
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   Alert,
-  KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { KeyboardScrollView } from "@/design-system/components";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -16,7 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { submitLeaveRequest, updateLeaveRequest } from "@/services/api";
+import { submitLeaveRequest, updateLeaveRequest, getErrorMessage } from "@/services/api";
 import type { Student, LeaveRequestPayload } from "@/types";
 
 const LEAVE_TYPES = ["Sick", "Casual", "Emergency", "Personal", "Other"];
@@ -39,15 +38,13 @@ function formatDisplayDate(d: Date): string {
 
 export default function ApplyLeaveScreen() {
   const params = useLocalSearchParams<Record<string, string>>();
-  const parentUuid = useAuthStore((s) => s.parentUuid);
   const students = useAuthStore((s) => s.students);
-  const selectedStudentUuid = useAuthStore((s) => s.selectedStudentUuid);
-  const childUuid = selectedStudentUuid ?? students?.[0]?.uuid;
+  const studentUuid = useAuthStore((s) => s.studentUuid) ?? students?.[0]?.uuid;
 
   const editId = params.editId ? Number(params.editId) : null;
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(
-    students.find((s) => s.uuid === childUuid) ?? students[0] ?? null,
+    students.find((s) => s.uuid === studentUuid) ?? students[0] ?? null,
   );
   const [fromDate, setFromDate] = useState<Date>(() => {
     if (params.fromDate && isValidDate(params.fromDate)) return new Date(params.fromDate);
@@ -81,7 +78,7 @@ export default function ApplyLeaveScreen() {
 
   const handleSubmit = useCallback(async () => {
     if (!validate()) return;
-    if (!parentUuid || !childUuid || !selectedStudent) return;
+    if (!studentUuid || !selectedStudent) return;
 
     setSubmitting(true);
     try {
@@ -93,23 +90,22 @@ export default function ApplyLeaveScreen() {
       } as LeaveRequestPayload;
 
       if (editId) {
-        await updateLeaveRequest(parentUuid, childUuid, editId, payload);
+        await updateLeaveRequest(studentUuid, editId, payload);
         Alert.alert("Success", "Leave request updated successfully.", [
           { text: "OK", onPress: () => router.back() },
         ]);
       } else {
-        await submitLeaveRequest(parentUuid, childUuid, payload);
+        await submitLeaveRequest(studentUuid, payload);
         Alert.alert("Success", "Leave request submitted successfully.", [
           { text: "OK", onPress: () => router.back() },
         ]);
       }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? "Failed to submit leave request";
-      Alert.alert("Error", msg);
+    } catch (err: unknown) {
+      Alert.alert("Error", getErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
-  }, [validate, parentUuid, childUuid, selectedStudent, fromDate, toDate, leaveType, reason, editId]);
+  }, [validate, studentUuid, selectedStudent, fromDate, toDate, leaveType, reason, editId]);
 
   return (
     <SafeAreaView className="flex-1 bg-surface-background">
@@ -126,8 +122,10 @@ export default function ApplyLeaveScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1">
-        <ScrollView className="flex-1 px-5 pt-5" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView
+        className="flex-1 px-5 pt-5"
+        bottomOffset={16}
+      >
           <Card padding="lg" className="mb-4">
             <Text className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-4">Leave Details</Text>
 
@@ -235,8 +233,7 @@ export default function ApplyLeaveScreen() {
               disabled={submitting}
             />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardScrollView>
 
       {showDatePicker && (
         <DateTimePicker

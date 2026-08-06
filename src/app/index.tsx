@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { View, Text, Animated, Image } from "react-native";
 import { useAuthStore } from "@/store/auth.store";
 import { useBrandingStore } from "@/store/branding.store";
+import { getAccessToken } from "@/utils/secureTokens";
 
 export default function SplashScreen() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -25,18 +26,17 @@ export default function SplashScreen() {
       }),
     ]).start();
 
-    const timer = setTimeout(() => {
-      if (isAuthenticated) {
-        console.log("[Splash] Authenticated, redirecting to /(tabs)/(home)");
-        router.replace("/(tabs)/(home)" as any);
+    const timer = setTimeout(async () => {
+      const token = await getAccessToken();
+      if (isAuthenticated && token) {
+        router.replace("/(tabs)/(home)");
       } else {
-        console.log("[Splash] Not authenticated, redirecting to /(auth)/login");
-        router.replace("/(auth)/login" as any);
+        router.replace("/(auth)/login");
       }
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fadeAnim, scaleAnim]);
 
   const appName = branding.appName || "School ERP";
   const schoolName = branding.schoolName || "School ERP";

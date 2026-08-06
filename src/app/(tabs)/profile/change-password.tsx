@@ -1,16 +1,15 @@
 import { useState, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Alert, View, Text } from "react-native";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/auth.store";
-import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
-import { changePassword as changePasswordApi } from "@/services/api";
+import { Card, AppContainer, AppHeader, Button } from "@/design-system/components";
+import { useTheme, spacing, typeScale } from "@/design-system";
+import { changePassword as changePasswordApi, getErrorMessage } from "@/services/api";
 
 export default function ChangePasswordScreen() {
-  const parentUuid = useAuthStore((s) => s.parentUuid);
+  const { colors } = useTheme();
+  const studentUuid = useAuthStore((s) => s.studentUuid);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -35,11 +34,11 @@ export default function ChangePasswordScreen() {
 
   const handleSubmit = useCallback(async () => {
     if (!validate()) return;
-    if (!parentUuid) return;
+    if (!studentUuid) return;
 
     setSubmitting(true);
     try {
-      await changePasswordApi(parentUuid, {
+      await changePasswordApi({
         current_password: currentPassword,
         new_password: newPassword,
         confirm_password: confirmPassword,
@@ -47,94 +46,87 @@ export default function ChangePasswordScreen() {
       Alert.alert("Success", "Password updated successfully", [
         { text: "OK", onPress: () => router.back() },
       ]);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? "Failed to update password";
-      Alert.alert("Error", msg);
+    } catch (err: unknown) {
+      Alert.alert("Error", getErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
-  }, [validate, parentUuid, currentPassword, newPassword, confirmPassword]);
+  }, [validate, studentUuid, currentPassword, newPassword, confirmPassword]);
 
   return (
-    <SafeAreaView className="flex-1 bg-surface-background">
-      <View className="bg-white px-5 pt-3 pb-3 border-b border-slate-100">
-        <View className="flex-row items-center">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="w-8 h-8 items-center justify-center -ml-1 mr-2"
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back" size={22} color="#475569" />
-          </TouchableOpacity>
-          <Text className="text-slate-900 text-lg font-bold tracking-tight">Change Password</Text>
-        </View>
-      </View>
+    <AppContainer>
+      <AppHeader title="Change Password" showBack onBack={() => router.back()} />
 
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1">
-        <ScrollView className="flex-1 px-5 pt-5" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          <Card padding="lg" className="mb-4">
-            <View className="mb-2">
-              <Text className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Password Policy</Text>
-              <Text className="text-slate-400 text-xs mt-2 leading-4">
-                • At least 8 characters{"\n"}• One uppercase letter{"\n"}• One lowercase letter{"\n"}• One number
-              </Text>
-            </View>
-          </Card>
+        <Card padding="lg" style={{ marginBottom: spacing.lg }}>
+          <View style={{ marginBottom: spacing.sm }}>
+            <Text style={{ ...typeScale.overline, color: colors.textSecondary }}>
+              Password Policy
+            </Text>
+            <Text
+              style={{
+                ...typeScale.bodySm,
+                color: colors.textMuted,
+                lineHeight: typeScale.bodySm.lineHeight,
+                marginTop: spacing.md,
+              }}
+            >
+              {"• At least 8 characters\n• One uppercase letter\n• One lowercase letter\n• One number"}
+            </Text>
+          </View>
+        </Card>
 
-          <Card padding="lg" className="mb-4">
-            <View className="gap-5">
-              <Input
-                label="Current Password"
-                placeholder="Enter current password"
-                value={currentPassword}
-                onChangeText={(v) => {
-                  setCurrentPassword(v);
-                  setErrors((e) => ({ ...e, currentPassword: "" }));
-                }}
-                error={errors.currentPassword}
-                isPassword
-                leftIcon="lock-closed-outline"
-              />
+        <Card padding="lg" style={{ marginBottom: spacing.lg }}>
+          <View style={{ gap: spacing.xl }}>
+            <Input
+              label="Current Password"
+              placeholder="Enter current password"
+              value={currentPassword}
+              onChangeText={(v) => {
+                setCurrentPassword(v);
+                setErrors((e) => ({ ...e, currentPassword: "" }));
+              }}
+              error={errors.currentPassword}
+              isPassword
+              leftIcon="lock-closed-outline"
+            />
 
-              <Input
-                label="New Password"
-                placeholder="Enter new password"
-                value={newPassword}
-                onChangeText={(v) => {
-                  setNewPassword(v);
-                  setErrors((e) => ({ ...e, newPassword: "" }));
-                }}
-                error={errors.newPassword}
-                isPassword
-                leftIcon="lock-open-outline"
-              />
+            <Input
+              label="New Password"
+              placeholder="Enter new password"
+              value={newPassword}
+              onChangeText={(v) => {
+                setNewPassword(v);
+                setErrors((e) => ({ ...e, newPassword: "" }));
+              }}
+              error={errors.newPassword}
+              isPassword
+              leftIcon="lock-open-outline"
+            />
 
-              <Input
-                label="Confirm New Password"
-                placeholder="Re-enter new password"
-                value={confirmPassword}
-                onChangeText={(v) => {
-                  setConfirmPassword(v);
-                  setErrors((e) => ({ ...e, confirmPassword: "" }));
-                }}
-                error={errors.confirmPassword}
-                isPassword
-                leftIcon="checkmark-circle-outline"
-              />
-            </View>
-          </Card>
-
-          <View className="mb-8">
-            <Button
-              title="Update Password"
-              onPress={handleSubmit}
-              loading={submitting}
-              size="lg"
-              disabled={submitting}
+            <Input
+              label="Confirm New Password"
+              placeholder="Re-enter new password"
+              value={confirmPassword}
+              onChangeText={(v) => {
+                setConfirmPassword(v);
+                setErrors((e) => ({ ...e, confirmPassword: "" }));
+              }}
+              error={errors.confirmPassword}
+              isPassword
+              leftIcon="checkmark-circle-outline"
             />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </Card>
+
+      <View style={{ paddingBottom: spacing["2xl"] }}>
+        <Button
+          title="Update Password"
+          onPress={handleSubmit}
+          loading={submitting}
+          size="lg"
+          disabled={submitting}
+        />
+      </View>
+    </AppContainer>
   );
 }

@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/auth.store";
 import { Card } from "@/components/ui/Card";
-import { fetchTransportDashboard } from "@/services/api";
+import { fetchTransportDashboard, getErrorMessage } from "@/services/api";
 import type { TransportDashboardData } from "@/types";
 
 export default function TransportDriverScreen() {
@@ -14,29 +14,26 @@ export default function TransportDriverScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const parentUuid = useAuthStore((s) => s.parentUuid);
   const students = useAuthStore((s) => s.students);
-  const selectedStudentUuid = useAuthStore((s) => s.selectedStudentUuid);
-  const childUuid = selectedStudentUuid ?? students?.[0]?.uuid;
+  const studentUuid = useAuthStore((s) => s.studentUuid) ?? students?.[0]?.uuid;
 
   const loadTransport = useCallback(async () => {
-    if (!parentUuid || !childUuid) {
+    if (!studentUuid) {
       setLoading(false);
       setRefreshing(false);
       return;
     }
     try {
       setError(null);
-      const result = await fetchTransportDashboard(parentUuid, childUuid);
+      const result = await fetchTransportDashboard(studentUuid);
       setData(result);
-    } catch (err: any) {
-      console.error("[TransportDriver] load error:", err);
-      setError(err?.response?.data?.message ?? "Failed to load driver details");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [parentUuid, childUuid]);
+  }, [studentUuid]);
 
   useEffect(() => {
     loadTransport();

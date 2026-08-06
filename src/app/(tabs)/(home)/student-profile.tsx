@@ -1,43 +1,32 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/auth.store";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { ChildSwitcher } from "@/components/ChildSwitcher";
-import { fetchParent } from "@/services/api";
+import { fetchProfile } from "@/services/api";
+import type { ProfileInfo } from "@/types";
 
 export default function StudentProfileScreen() {
   const students = useAuthStore((s) => s.students);
-  const parentUuid = useAuthStore((s) => s.parentUuid);
-  const selectedStudentUuid = useAuthStore((s) => s.selectedStudentUuid);
-  const setSelectedStudentUuid = useAuthStore((s) => s.setSelectedStudentUuid);
+  const studentUuid = useAuthStore((s) => s.studentUuid);
   const user = useAuthStore((s) => s.user);
-  const student = students.find((s) => s.uuid === selectedStudentUuid) ?? students[0] ?? null;
+  const student = students.find((s) => s.uuid === studentUuid) ?? students[0] ?? null;
 
-  const [parentInfo, setParentInfo] = useState<Record<string, any> | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [guardianInfo, setGuardianInfo] = useState<ProfileInfo | null>(null);
 
-  const loadParentInfo = useCallback(async () => {
-    if (!parentUuid) {
-      setLoading(false);
-      return;
-    }
+  const loadGuardianInfo = useCallback(async () => {
     try {
-      const data = await fetchParent(parentUuid);
-      setParentInfo(data);
-    } catch (err) {
-      console.error("[StudentProfile] load parent error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [parentUuid]);
+      const data = await fetchProfile();
+      setGuardianInfo(data);
+    } catch {}
+  }, []);
 
   useEffect(() => {
-    loadParentInfo();
-  }, [loadParentInfo]);
+    loadGuardianInfo();
+  }, [loadGuardianInfo]);
 
   if (!student) {
     return (
@@ -65,12 +54,12 @@ export default function StudentProfileScreen() {
     );
   }
 
-  const guardian = parentInfo;
-  const fatherName = guardian?.father_name ?? guardian?.first_name ?? user?.name ?? "";
-  const motherName = guardian?.mother_name ?? "";
-  const contact = guardian?.phone ?? user?.phone ?? "";
-  const email = guardian?.email ?? user?.email ?? "";
-  const address = guardian?.address ?? "";
+  const profileContact = guardianInfo;
+  const primaryContactName = profileContact?.father_name ?? profileContact?.first_name ?? user?.name ?? "";
+  const secondaryContactName = profileContact?.mother_name ?? "";
+  const contact = profileContact?.phone ?? user?.phone ?? "";
+  const email = profileContact?.email ?? user?.email ?? "";
+  const address = profileContact?.address ?? "";
 
   return (
     <SafeAreaView className="flex-1 bg-surface-background">
@@ -84,12 +73,6 @@ export default function StudentProfileScreen() {
             <Ionicons name="chevron-back" size={22} color="#475569" />
           </TouchableOpacity>
           <Text className="text-slate-900 text-lg font-bold tracking-tight">Student Profile</Text>
-        </View>
-        <View className="mt-3">
-          <ChildSwitcher
-            selectedUuid={selectedStudentUuid}
-            onSelect={(uuid) => setSelectedStudentUuid(uuid)}
-          />
         </View>
       </View>
 
@@ -132,12 +115,12 @@ export default function StudentProfileScreen() {
           </Card>
         </View>
 
-        <Text className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-3">Parent Details</Text>
+        <Text className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-3">Contact Details</Text>
         <Card padding="none" className="overflow-hidden mb-4">
           {[
-            { icon: "person-outline", label: "Father's Name", value: fatherName },
-            { icon: "person-outline", label: "Mother's Name", value: motherName },
-            { icon: "call-outline", label: "Contact", value: contact },
+            { icon: "person-outline", label: "Primary Contact", value: primaryContactName },
+            { icon: "person-outline", label: "Secondary Contact", value: secondaryContactName },
+            { icon: "call-outline", label: "Phone", value: contact },
             { icon: "mail-outline", label: "Email", value: email },
             { icon: "home-outline", label: "Address", value: address || "—" },
           ].map((item, index, arr) => (
@@ -146,7 +129,7 @@ export default function StudentProfileScreen() {
               className={`flex-row items-center px-4 py-3.5 ${index < arr.length - 1 ? "border-b border-slate-50" : ""}`}
             >
               <View className="w-8 h-8 bg-slate-50 rounded-lg items-center justify-center mr-3">
-                <Ionicons name={item.icon as any} size={16} color="#64748B" />
+                <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={16} color="#64748B" />
               </View>
               <View className="flex-1">
                 <Text className="text-slate-400 text-xs">{item.label}</Text>

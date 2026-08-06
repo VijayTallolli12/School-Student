@@ -1,12 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View, Text, ActivityIndicator, RefreshControl } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/auth.store";
-import { Card } from "@/components/ui/Card";
-import { fetchTransportDashboard } from "@/services/api";
+import { fetchTransportDashboard, getErrorMessage } from "@/services/api";
 import type { TransportDashboardData, TransportStop } from "@/types";
+import { useTheme, spacing, radius, typeScale } from "@/design-system";
+import {
+  AppContainer,
+  AppHeader,
+  Card,
+  EmptyState,
+  ErrorState,
+  SectionHeader,
+  FadeInView,
+  Tag,
+} from "@/design-system/components";
 
 function formatTime(timeStr: string | null): string {
   if (!timeStr) return "—";
@@ -23,29 +32,26 @@ export default function TransportRouteScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const parentUuid = useAuthStore((s) => s.parentUuid);
   const students = useAuthStore((s) => s.students);
-  const selectedStudentUuid = useAuthStore((s) => s.selectedStudentUuid);
-  const childUuid = selectedStudentUuid ?? students?.[0]?.uuid;
+  const studentUuid = useAuthStore((s) => s.studentUuid) ?? students?.[0]?.uuid;
 
   const loadTransport = useCallback(async () => {
-    if (!parentUuid || !childUuid) {
+    if (!studentUuid) {
       setLoading(false);
       setRefreshing(false);
       return;
     }
     try {
       setError(null);
-      const result = await fetchTransportDashboard(parentUuid, childUuid);
+      const result = await fetchTransportDashboard(studentUuid);
       setData(result);
-    } catch (err: any) {
-      console.error("[TransportRoute] load error:", err);
-      setError(err?.response?.data?.message ?? "Failed to load route details");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [parentUuid, childUuid]);
+  }, [studentUuid]);
 
   useEffect(() => {
     loadTransport();
@@ -59,162 +65,213 @@ export default function TransportRouteScreen() {
   const transport = data?.transport;
   const stops = data?.stops ?? [];
 
-  return (
-    <SafeAreaView className="flex-1 bg-surface-background">
-      <View className="bg-white px-5 pt-3 pb-3 border-b border-slate-100">
-        <View className="flex-row items-center">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="w-8 h-8 items-center justify-center -ml-1 mr-2"
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back" size={22} color="#475569" />
-          </TouchableOpacity>
-          <Text className="text-slate-900 text-lg font-bold tracking-tight">Route Details</Text>
-        </View>
-      </View>
+  const { colors } = useTheme();
 
-      <ScrollView
-        className="flex-1 px-5"
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#06B6D4" colors={["#06B6D4"]} />}
-      >
-        {loading ? (
-          <View className="items-center justify-center pt-24 pb-8">
-            <ActivityIndicator size="large" color="#06B6D4" />
-            <Text className="text-slate-400 text-sm mt-3">Loading route details...</Text>
-          </View>
-        ) : error ? (
-          <View className="items-center justify-center pt-20 pb-8">
-            <View className="w-16 h-16 bg-red-50 rounded-full items-center justify-center mb-4">
-              <Ionicons name="cloud-offline-outline" size={32} color="#EF4444" />
-            </View>
-            <Text className="text-slate-800 text-base font-semibold mb-2">Connection Error</Text>
-            <Text className="text-slate-400 text-sm text-center mb-6">{error}</Text>
-            <TouchableOpacity
-              className="flex-row items-center bg-primary-600 px-6 py-3 rounded-xl"
-              activeOpacity={0.7}
-              onPress={onRefresh}
-            >
-              <Ionicons name="refresh-outline" size={18} color="#FFFFFF" />
-              <Text className="text-white font-semibold text-sm ml-2">Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : !transport ? (
-          <View className="items-center justify-center pt-20 pb-8">
-            <View className="w-16 h-16 bg-teal-50 rounded-full items-center justify-center mb-4">
-              <Ionicons name="map-outline" size={32} color="#14B8A6" />
-            </View>
-            <Text className="text-slate-800 text-base font-semibold mb-2">No Route Assigned</Text>
-            <Text className="text-slate-400 text-sm text-center">Route details will appear once transport is assigned.</Text>
-          </View>
-        ) : (
-          <View className="gap-3 mb-8">
+  return (
+    <AppContainer
+      scrollProps={{
+        refreshControl: <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} colors={[colors.brand]} />,
+      }}
+    >
+      <AppHeader title="Route Details" showBack onBack={() => router.back()} />
+
+      {loading ? (
+        <View style={{ alignItems: "center", justifyContent: "center", paddingTop: 96 }}>
+          <ActivityIndicator size="large" color={colors.brand} />
+          <Text style={{ color: colors.textSecondary, marginTop: spacing.md, fontSize: 14 }}>Loading route details...</Text>
+        </View>
+      ) : error ? (
+        <ErrorState message={error} onRetry={onRefresh} />
+      ) : !transport ? (
+        <EmptyState
+          icon="map-outline"
+          title="No Route Assigned"
+          description="Route details will appear once transport is assigned."
+        />
+      ) : (
+        <View style={{ gap: spacing.md }}>
+          <FadeInView>
+            <SectionHeader title="Route Information" />
             <Card padding="lg">
-              <Text className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-4">Route Information</Text>
-              <View className="gap-4">
+              <View style={{ gap: spacing.lg }}>
                 <View>
-                  <Text className="text-slate-400 text-xs">Route Name</Text>
-                  <Text className="text-slate-900 text-sm font-semibold">{transport.route_name ?? "—"}</Text>
+                  <Text style={{ ...typeScale.caption, color: colors.textMuted }}>Route Name</Text>
+                  <Text style={{ ...typeScale.bodyStrong, color: colors.text }}>{transport.route_name ?? "—"}</Text>
                 </View>
-                <View className="flex-row items-center gap-3">
-                  <View className="flex-1">
-                    <Text className="text-green-600 text-xs font-medium">Start Point</Text>
-                    <Text className="text-slate-900 text-sm">{transport.route_start ?? "—"}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ ...typeScale.caption, color: colors.success, fontWeight: "700" }}>Start Point</Text>
+                    <Text style={{ ...typeScale.body, color: colors.text }}>{transport.route_start ?? "—"}</Text>
                   </View>
-                  <Ionicons name="arrow-forward" size={16} color="#94A3B8" />
-                  <View className="flex-1">
-                    <Text className="text-red-600 text-xs font-medium">End Point</Text>
-                    <Text className="text-slate-900 text-sm">{transport.route_end ?? "—"}</Text>
+                  <Ionicons name="arrow-forward" size={16} color={colors.textTertiary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ ...typeScale.caption, color: colors.error, fontWeight: "700" }}>End Point</Text>
+                    <Text style={{ ...typeScale.body, color: colors.text }}>{transport.route_end ?? "—"}</Text>
                   </View>
                 </View>
               </View>
             </Card>
+          </FadeInView>
 
+          <FadeInView>
+            <SectionHeader title="Vehicle" />
             <Card padding="lg">
-              <Text className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-4">Vehicle</Text>
-              <View className="flex-row items-center gap-3">
-                <View className="w-10 h-10 bg-cyan-50 rounded-xl items-center justify-center">
-                  <Ionicons name="bus-outline" size={20} color="#06B6D4" />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: radius.md,
+                    backgroundColor: `${colors.info}1A`,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="bus-outline" size={20} color={colors.info} />
                 </View>
-                <View className="flex-1">
-                  <Text className="text-slate-900 text-sm font-semibold">{transport.vehicle_number ?? "—"}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...typeScale.bodyStrong, color: colors.text }}>{transport.vehicle_number ?? "—"}</Text>
                   {transport.vehicle_name ? (
-                    <Text className="text-slate-500 text-xs">{transport.vehicle_name}</Text>
+                    <Text style={{ ...typeScale.bodySm, color: colors.textSecondary }}>{transport.vehicle_name}</Text>
                   ) : null}
                   {transport.vehicle_type ? (
-                    <Text className="text-slate-400 text-xs">{transport.vehicle_type.replace("_", " ")}</Text>
+                    <Text style={{ ...typeScale.bodySm, color: colors.textTertiary }}>
+                      {transport.vehicle_type.replace("_", " ")}
+                    </Text>
                   ) : null}
                 </View>
               </View>
             </Card>
+          </FadeInView>
 
+          <FadeInView>
+            <SectionHeader title="Driver" />
             <Card padding="lg">
-              <Text className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-4">Driver</Text>
-              <View className="flex-row items-center gap-3">
-                <View className="w-10 h-10 bg-purple-50 rounded-xl items-center justify-center">
-                  <Ionicons name="person-outline" size={20} color="#8B5CF6" />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: radius.md,
+                    backgroundColor: `${colors.secondary}1A`,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="person-outline" size={20} color={colors.secondary} />
                 </View>
-                <View className="flex-1">
-                  <Text className="text-slate-900 text-sm font-semibold">{transport.driver_name ?? "—"}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...typeScale.bodyStrong, color: colors.text }}>{transport.driver_name ?? "—"}</Text>
                   {transport.driver_mobile ? (
-                    <Text className="text-slate-500 text-xs">{transport.driver_mobile}</Text>
+                    <Text style={{ ...typeScale.bodySm, color: colors.textSecondary }}>{transport.driver_mobile}</Text>
                   ) : null}
                 </View>
               </View>
             </Card>
+          </FadeInView>
 
-            {stops.length > 0 ? (
+          {stops.length > 0 ? (
+            <FadeInView>
+              <SectionHeader title="Stop Sequence" />
               <Card padding="lg">
-                <Text className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-4">Stop Sequence</Text>
-                <View className="gap-2">
+                <View style={{ gap: spacing.md }}>
                   {stops.map((stop: TransportStop, index: number) => (
-                    <View key={stop.id} className="flex-row items-center gap-3">
-                      <View className={`w-6 h-6 rounded-full items-center justify-center ${stop.is_student_stop ? "bg-cyan-500" : "bg-slate-200"}`}>
-                        <Text className={`text-xs font-bold ${stop.is_student_stop ? "text-white" : "text-slate-500"}`}>
+                    <View key={stop.id} style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+                      <View
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: radius.full,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: stop.is_student_stop ? colors.brand : colors.surfaceSunken,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: "700",
+                            color: stop.is_student_stop ? colors.onBrand : colors.textSecondary,
+                          }}
+                        >
                           {index + 1}
                         </Text>
                       </View>
-                      <View className="flex-1">
-                        <Text className={`text-sm ${stop.is_student_stop ? "text-slate-900 font-semibold" : "text-slate-600"}`}>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            ...typeScale.bodySm,
+                            color: stop.is_student_stop ? colors.text : colors.textSecondary,
+                            fontWeight: stop.is_student_stop ? "600" : "400",
+                          }}
+                        >
                           {stop.stop_name}
                         </Text>
                       </View>
-                      <Text className="text-slate-400 text-xs">{formatTime(stop.pickup_time)}</Text>
+                      <Text style={{ ...typeScale.caption, color: colors.textTertiary }}>{formatTime(stop.pickup_time)}</Text>
                     </View>
                   ))}
                 </View>
               </Card>
-            ) : null}
+            </FadeInView>
+          ) : null}
 
+          <FadeInView>
+            <SectionHeader title="Pickup & Drop" />
             <Card padding="lg">
-              <Text className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-4">Pickup & Drop</Text>
-              <View className="gap-4">
-                <View className="flex-row items-center gap-3">
-                  <View className="w-8 h-8 bg-green-50 rounded-full items-center justify-center">
-                    <Ionicons name="arrow-up-outline" size={14} color="#16A34A" />
+              <View style={{ gap: spacing.lg }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: radius.full,
+                      backgroundColor: `${colors.success}1A`,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name="arrow-up-outline" size={16} color={colors.success} />
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-slate-400 text-xs">Pickup</Text>
-                    <Text className="text-slate-900 text-sm font-semibold">{transport.pickup_stop ?? "—"}</Text>
-                    <Text className="text-slate-500 text-xs">{formatTime(transport.pickup_time)}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ ...typeScale.caption, color: colors.textMuted }}>Pickup</Text>
+                    <Text style={{ ...typeScale.bodyStrong, color: colors.text }}>{transport.pickup_stop ?? "—"}</Text>
+                    <Text style={{ ...typeScale.bodySm, color: colors.textSecondary }}>{formatTime(transport.pickup_time)}</Text>
                   </View>
                 </View>
-                <View className="flex-row items-center gap-3">
-                  <View className="w-8 h-8 bg-red-50 rounded-full items-center justify-center">
-                    <Ionicons name="arrow-down-outline" size={14} color="#DC2626" />
+                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: radius.full,
+                      backgroundColor: `${colors.error}1A`,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name="arrow-down-outline" size={16} color={colors.error} />
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-slate-400 text-xs">Drop</Text>
-                    <Text className="text-slate-900 text-sm font-semibold">{transport.drop_stop ?? "—"}</Text>
-                    <Text className="text-slate-500 text-xs">{formatTime(transport.drop_time)}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ ...typeScale.caption, color: colors.textMuted }}>Drop</Text>
+                    <Text style={{ ...typeScale.bodyStrong, color: colors.text }}>{transport.drop_stop ?? "—"}</Text>
+                    <Text style={{ ...typeScale.bodySm, color: colors.textSecondary }}>{formatTime(transport.drop_time)}</Text>
                   </View>
                 </View>
               </View>
             </Card>
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+          </FadeInView>
+
+          <FadeInView>
+            <Card padding="lg">
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text style={{ ...typeScale.overline, color: colors.textMuted }}>Status</Text>
+                <Tag label={transport.status} tone={transport.status === "active" ? "success" : "neutral"} />
+              </View>
+            </Card>
+          </FadeInView>
+        </View>
+      )}
+    </AppContainer>
   );
 }

@@ -3,11 +3,9 @@ import { router } from "expo-router";
 import {
   View,
   Text,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   Alert,
   Image,
+  type TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,11 +14,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthStore } from "@/store/auth.store";
 import { useBrandingStore } from "@/store/branding.store";
-import apiClient from "@/services/api";
-import { storage } from "@/utils/storage";
-import { STORAGE_KEYS } from "@/constants/config";
+import apiClient, { getErrorMessage } from "@/services/api";
+import { persistTokens } from "@/utils/secureTokens";
 import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { useTheme, spacing, radius, typeScale } from "@/design-system";
+import { Button, KeyboardScrollView } from "@/design-system/components";
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -29,12 +27,55 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+function mapStudent(raw: Record<string, unknown>) {
+  return {
+    id: (raw.id as number) ?? 0,
+    uuid: (raw.uuid as string) ?? "",
+    name: (raw.name as string) ?? "",
+    class: (raw.class as string) ?? "",
+    section: (raw.section as string) ?? "",
+    roll_number: (raw.roll_number as string) ?? "",
+    admission_no: (raw.admission_no as string) ?? "",
+    avatar_url: ((raw.avatar_url as string) ?? (raw.photo as string) ?? null),
+  };
+}
+
+function extractStudents(payload: {
+  user?: Record<string, unknown>;
+  students?: Record<string, unknown>[];
+  student?: Record<string, unknown>;
+}): Record<string, unknown>[] {
+  if (Array.isArray(payload.students) && payload.students.length > 0) {
+    return payload.students;
+  }
+
+  const user = payload.user;
+  if (user && typeof user === "object") {
+    const userStudents = user.students;
+    if (Array.isArray(userStudents) && userStudents.length > 0) {
+      return userStudents as Record<string, unknown>[];
+    }
+
+    const userStudent = user.student;
+    if (userStudent && typeof userStudent === "object") {
+      return [userStudent as Record<string, unknown>];
+    }
+  }
+
+  if (payload.student && typeof payload.student === "object") {
+    return [payload.student];
+  }
+
+  return [];
+}
+
 export default function LoginScreen() {
+  const { colors } = useTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hydrateFromApi = useAuthStore((s) => s.hydrateFromApi);
   const branding = useBrandingStore((s) => s.branding);
   const refreshBranding = useBrandingStore((s) => s.refreshBranding);
-  const scrollRef = useRef<ScrollView>(null);
+  const passwordRef = useRef<TextInput>(null);
 
   useEffect(() => {
     refreshBranding();
@@ -58,9 +99,13 @@ export default function LoginScreen() {
       }
       const payload: {
         token: string;
+        refresh_token?: string;
+        expires_in?: number;
+        token_type?: string;
         user: Record<string, unknown>;
-        students: Record<string, unknown>[];
-        parent_uuid?: string;
+        students?: Record<string, unknown>[];
+        student?: Record<string, unknown>;
+        student_uuid?: string;
       } = wrapper.data;
       if (!payload || !payload.token) {
         throw new Error("Login did not return valid user credentials.");
@@ -72,34 +117,42 @@ export default function LoginScreen() {
         email: (payload.user.email as string) ?? "",
         phone: (payload.user.phone as string) ?? "",
         avatar_url: (payload.user.avatar_url as string) ?? null,
-        role: "parent" as const,
+        role: "student" as const,
       };
 
-      const mappedStudents = (payload.students ?? []).map((s) => ({
-        id: s.id as number,
-        uuid: (s.uuid as string) ?? "",
-        name: (s.name as string) ?? "",
-        class: (s.class as string) ?? "",
-        section: (s.section as string) ?? "",
-        roll_number: (s.roll_number as string) ?? "",
-        admission_no: (s.admission_no as string) ?? "",
-        avatar_url: (s.photo as string) ?? null,
-      }));
+      const rawStudents = extractStudents(payload);
+      const mappedStudents = rawStudents.map(mapStudent).filter((s) => !!s.uuid);
+
+      const payloadUserStudentUuid =
+        payload.user && typeof payload.user === "object"
+          ? ((payload.user.student_uuid as string | undefined) ?? undefined)
+          : undefined;
+      const selectedStudentUuid =
+        (payload.student_uuid as string | undefined) ??
+        payloadUserStudentUuid ??
+        mappedStudents[0]?.uuid ??
+        undefined;
 
       hydrateFromApi({
         user: mappedUser,
         students: mappedStudents,
         token: payload.token,
-        parent_uuid: (payload.parent_uuid as string | undefined) ?? undefined,
+        refresh_token: payload.refresh_token,
+        token_type: payload.token_type,
+        expires_in: payload.expires_in,
+        student_uuid: selectedStudentUuid,
       });
 
-      await storage.set(STORAGE_KEYS.AUTH_TOKEN, payload.token);
-      router.replace("/(tabs)/(home)" as any);
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Login failed. Please check your credentials.";
+      await persistTokens({
+        accessToken: payload.token,
+        refreshToken: payload.refresh_token ?? null,
+        tokenType: payload.token_type,
+        expiresInSeconds: payload.expires_in,
+      });
+
+      router.replace("/(tabs)/(home)");
+    } catch (error: unknown) {
+      const message = getErrorMessage(error) || "Login failed. Please check your credentials.";
       Alert.alert("Login Error", message);
     } finally {
       setIsSubmitting(false);
@@ -112,52 +165,78 @@ export default function LoginScreen() {
   const primaryColor = branding.primaryColor;
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className="flex-1"
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        bounces={false}
+        bottomOffset={spacing.xl}
       >
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-        >
-          <View className="px-6 pt-12 pb-4">
+          <View
+            style={{
+              paddingHorizontal: spacing.xl,
+              paddingTop: spacing["4xl"],
+              paddingBottom: spacing.xl,
+            }}
+          >
             {hasLogo ? (
-              <View className="w-16 h-16 rounded-2xl items-center justify-center mb-6 overflow-hidden bg-white border border-slate-100">
+              <View
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: radius.xl,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: spacing["2xl"],
+                  overflow: "hidden",
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
                 <Image
                   source={{ uri: branding.schoolLogo as string }}
-                  className="w-12 h-12"
+                  style={{ width: 48, height: 48 }}
                   resizeMode="contain"
                 />
               </View>
             ) : (
               <View
-                className="w-16 h-16 rounded-2xl items-center justify-center mb-6"
-                style={{ backgroundColor: `${primaryColor}14` }}
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: radius.xl,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: spacing["2xl"],
+                  backgroundColor: `${primaryColor}14`,
+                }}
               >
                 <Ionicons name="school-outline" size={36} color={primaryColor} />
               </View>
             )}
-            <Text className="text-slate-900 text-3xl font-bold tracking-tight">
+            <Text style={{ ...typeScale.displaySm, color: colors.text }}>
               Welcome to {schoolName}
             </Text>
-            <Text className="text-slate-500 text-base mt-1.5">
+            <Text
+              style={{
+                ...typeScale.body,
+                color: colors.textSecondary,
+                marginTop: spacing.sm,
+              }}
+            >
               Sign in to your {appName} account
             </Text>
           </View>
 
-          <View className="px-5 flex-1">
-            <View className="gap-5">
+          <View style={{ paddingHorizontal: spacing.xl, flex: 1 }}>
+            <View style={{ gap: spacing.xl }}>
               <Controller
                 control={control}
                 name="email"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
                     label="Email Address"
-                    placeholder="parent@school.com"
+                    placeholder="student@school.com"
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoComplete="email"
@@ -167,6 +246,7 @@ export default function LoginScreen() {
                     onChangeText={onChange}
                     value={value}
                     returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
                   />
                 )}
               />
@@ -181,6 +261,7 @@ export default function LoginScreen() {
                     autoComplete="password"
                     leftIcon="lock-closed-outline"
                     isPassword
+                    ref={passwordRef}
                     error={errors.password?.message}
                     onBlur={onBlur}
                     onChangeText={onChange}
@@ -191,31 +272,25 @@ export default function LoginScreen() {
                 )}
               />
 
-              <View className="pt-3">
-                <Button
-                  title="Sign In"
-                  onPress={handleSubmit(onLogin)}
-                  loading={isSubmitting}
-                  size="lg"
-                />
+              <View style={{ paddingTop: spacing.md }}>
+                <Button title="Sign In" onPress={handleSubmit(onLogin)} loading={isSubmitting} size="lg" />
               </View>
             </View>
           </View>
 
-          <View className="items-center pt-8 pb-8">
-            <View className="flex-row items-center">
-              <View className="w-8 h-px bg-slate-200" />
-              <Text className="text-slate-400 text-xs mx-3 font-medium">
+          <View style={{ alignItems: "center", paddingVertical: spacing["3xl"] }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ width: 32, height: 1, backgroundColor: colors.divider }} />
+              <Text style={{ ...typeScale.caption, color: colors.textTertiary, marginHorizontal: spacing.md }}>
                 {appName}
               </Text>
-              <View className="w-8 h-px bg-slate-200" />
+              <View style={{ width: 32, height: 1, backgroundColor: colors.divider }} />
             </View>
-            <Text className="text-slate-400 text-xs mt-2">
+            <Text style={{ ...typeScale.caption, color: colors.textTertiary, marginTop: spacing.sm }}>
               Powered by Folkslogic
             </Text>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardScrollView>
     </SafeAreaView>
   );
 }

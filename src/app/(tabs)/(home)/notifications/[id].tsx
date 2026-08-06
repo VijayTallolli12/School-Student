@@ -1,24 +1,33 @@
 import { useCallback, useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { router, useLocalSearchParams, type Href } from "expo-router";
+import { useTheme, spacing, radius, typeScale } from "@/design-system";
+import { AppContainer, AppHeader, Card, Tag, EmptyState } from "@/design-system/components";
 import { markNotificationRead } from "@/services/api";
 
-const TYPE_META: Record<string, { icon: string; color: string; label: string }> = {
-  attendance: { icon: "calendar-outline", color: "#3B82F6", label: "Attendance" },
-  fees: { icon: "wallet-outline", color: "#F59E0B", label: "Fees" },
-  result: { icon: "school-outline", color: "#8B5CF6", label: "Exam Result" },
-  homework: { icon: "book-outline", color: "#F97316", label: "Homework" },
-  general: { icon: "megaphone-outline", color: "#64748B", label: "General" },
+const TYPE_META: Record<string, { icon: keyof typeof Ionicons.glyphMap; label: string }> = {
+  attendance: { icon: "calendar-outline", label: "Attendance" },
+  fees: { icon: "wallet-outline", label: "Fees" },
+  result: { icon: "school-outline", label: "Exam Result" },
+  homework: { icon: "book-outline", label: "Homework" },
+  general: { icon: "megaphone-outline", label: "General" },
+};
+
+const TYPE_TONE: Record<string, "info" | "warning" | "neutral"> = {
+  attendance: "info",
+  fees: "warning",
+  result: "info",
+  homework: "warning",
+  general: "neutral",
+};
+
+const TYPE_COLOR: Record<string, keyof ReturnType<typeof useTheme>["colors"]> = {
+  attendance: "info",
+  fees: "warning",
+  result: "success",
+  homework: "secondary",
+  general: "textSecondary",
 };
 
 function formatDate(dateStr: string): string {
@@ -40,20 +49,24 @@ export default function NotificationDetailScreen() {
   const [marked, setMarked] = useState(false);
   const [marking, setMarking] = useState(false);
 
+  const { colors } = useTheme();
+
   const id = params.id ? Number(params.id) : null;
   const title = params.title ?? "";
   const body = params.body ?? "";
-  const type = (params.type ?? "general") as keyof typeof TYPE_META;
+  const type = params.type ?? "general";
   const isRead = params.is_read === "true";
   const createdAt = params.created_at ?? "";
 
   const meta = TYPE_META[type] ?? TYPE_META.general;
+  const tone = TYPE_TONE[type] ?? "neutral";
+  const iconColor = colors[TYPE_COLOR[type] ?? "textSecondary"] as string;
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.push("/notifications" as any);
+      router.push("/notifications" as Href);
     }
   }, []);
 
@@ -72,107 +85,81 @@ export default function NotificationDetailScreen() {
 
   if (!id) {
     return (
-      <SafeAreaView className="flex-1 bg-surface-background">
-        <View className="bg-white px-5 pt-3 pb-3 border-b border-slate-100">
-          <View className="flex-row items-center">
-            <TouchableOpacity
-              onPress={() => router.back()}
-              className="w-8 h-8 items-center justify-center -ml-1 mr-2"
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chevron-back" size={22} color="#475569" />
-            </TouchableOpacity>
-            <Text className="text-slate-900 text-lg font-bold tracking-tight">Notification</Text>
-          </View>
-        </View>
-        <View className="flex-1 items-center justify-center px-8">
-          <View className="w-16 h-16 bg-slate-100 rounded-full items-center justify-center mb-4">
-            <Ionicons name="notifications-off-outline" size={28} color="#94A3B8" />
-          </View>
-          <Text className="text-slate-700 text-base font-semibold text-center">Notification Not Found</Text>
-          <Text className="text-slate-400 text-sm text-center mt-1.5">This notification could not be loaded</Text>
-        </View>
-      </SafeAreaView>
+      <AppContainer>
+        <AppHeader title="Notification" showBack onBack={handleBack} />
+        <EmptyState
+          icon="notifications-off-outline"
+          title="Notification Not Found"
+          description="This notification could not be loaded"
+        />
+      </AppContainer>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface-background">
-      <View className="bg-white px-5 pt-3 pb-3 border-b border-slate-100">
-        <View className="flex-row items-center">
-          <TouchableOpacity
-            onPress={handleBack}
-            className="w-8 h-8 items-center justify-center -ml-1 mr-2"
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back" size={22} color="#475569" />
-          </TouchableOpacity>
-          <View className="flex-1">
-            <Text className="text-slate-900 text-lg font-bold tracking-tight">Notification</Text>
-          </View>
-          {!isRead && !marked && (
-            <TouchableOpacity
+    <AppContainer>
+      <AppHeader
+        title="Notification"
+        showBack
+        onBack={handleBack}
+        right={
+          !isRead && !marked ? (
+            <Pressable
               onPress={handleMarkAsRead}
               disabled={marking}
-              className="flex-row items-center"
-              activeOpacity={0.7}
+              hitSlop={8}
+              accessibilityRole="button"
+              style={{ flexDirection: "row", alignItems: "center" }}
             >
               {marking ? (
-                <ActivityIndicator size="small" color="#3B82F6" />
+                <ActivityIndicator size="small" color={colors.brand} />
               ) : (
-                <Text className="text-primary-600 text-xs font-semibold">Mark Read</Text>
+                <Text style={{ color: colors.brand, fontSize: 13, fontWeight: "700" }}>Mark Read</Text>
               )}
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+            </Pressable>
+          ) : undefined
+        }
+      />
 
-      <ScrollView
-        className="flex-1 px-5 pt-5"
-        showsVerticalScrollIndicator={false}
-      >
-        <Card padding="lg" className="mb-4">
-          <View className="flex-row items-start">
-            <View
-              className="w-12 h-12 rounded-xl items-center justify-center mr-4"
-              style={{ backgroundColor: meta.color + "15" }}
-            >
-              <Ionicons name={meta.icon as any} size={24} color={meta.color} />
-            </View>
-            <View className="flex-1">
-              <View className="flex-row items-center flex-wrap gap-2 mb-1">
-                <Badge label={meta.label} variant={
-                  type === "attendance" ? "info" :
-                  type === "fees" ? "warning" :
-                  type === "result" ? "info" :
-                  type === "homework" ? "warning" : "neutral"
-                } />
-                {!isRead && !marked && (
-                  <Badge label="New" variant="info" />
-                )}
-                {(isRead || marked) && (
-                  <Badge label="Read" variant="neutral" />
-                )}
-              </View>
-              <Text className="text-slate-900 text-lg font-bold mt-2 leading-6">
-                {title || "Untitled Notification"}
-              </Text>
-              <Text className="text-slate-400 text-xs mt-2">
-                {createdAt ? formatDate(createdAt) : ""}
-              </Text>
-            </View>
+      <Card padding="lg" style={{ marginBottom: spacing.md }}>
+        <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+          <View
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: radius.md,
+              backgroundColor: `${iconColor}1A`,
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: spacing.md,
+            }}
+          >
+            <Ionicons name={meta.icon} size={24} color={iconColor} />
           </View>
-        </Card>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.sm }}>
+              <Tag label={meta.label} tone={tone} />
+              {!isRead && !marked && <Tag label="New" tone="info" />}
+              {(isRead || marked) && <Tag label="Read" tone="neutral" />}
+            </View>
+            <Text style={{ ...typeScale.title, color: colors.text }}>
+              {title || "Untitled Notification"}
+            </Text>
+            <Text style={{ ...typeScale.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+              {createdAt ? formatDate(createdAt) : ""}
+            </Text>
+          </View>
+        </View>
+      </Card>
 
-        <Card padding="lg" className="mb-6">
-          <Text className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-3">
-            Message
-          </Text>
-          <Text className="text-slate-800 text-base leading-6">
-            {body || "No additional details available for this notification."}
-          </Text>
-        </Card>
-      </ScrollView>
-    </SafeAreaView>
+      <Card padding="lg" style={{ marginBottom: spacing.lg }}>
+        <Text style={{ ...typeScale.overline, color: colors.textMuted, marginBottom: spacing.sm }}>
+          Message
+        </Text>
+        <Text style={{ ...typeScale.body, lineHeight: 24, color: colors.text }}>
+          {body || "No additional details available for this notification."}
+        </Text>
+      </Card>
+    </AppContainer>
   );
 }

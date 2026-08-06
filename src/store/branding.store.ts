@@ -66,7 +66,7 @@ export const useBrandingStore = create<BrandingState>()(
         }),
     }),
     {
-      name: "school_parent_branding_store",
+      name: "school_student_branding_store",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         branding: state.branding,

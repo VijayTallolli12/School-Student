@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, memo } from "react";
+import { useState, useCallback, useRef, memo, forwardRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useBrandingStore } from "@/store/branding.store";
+import { useRegisterFocusedInput } from "@/design-system/components/KeyboardScrollView";
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -22,21 +23,35 @@ interface InputProps extends TextInputProps {
 const BASE_CONTAINER_CLASS = "flex-row items-center rounded-xl border px-4";
 const INPUT_CLASS = "flex-1 py-3.5 text-base text-slate-900";
 
-export const Input = memo(function Input({
-  label,
-  error,
-  leftIcon,
-  isPassword,
-  containerStyle,
-  className = "",
-  onFocus: externalOnFocus,
-  onBlur: externalOnBlur,
-  ...rest
-}: InputProps) {
+export const Input = memo(
+  forwardRef<TextInput, InputProps>(function Input({
+    label,
+    error,
+    leftIcon,
+    isPassword,
+    containerStyle,
+    className = "",
+    onFocus: externalOnFocus,
+    onBlur: externalOnBlur,
+    ...rest
+  }: InputProps, ref) {
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const showError = !!error;
   const primaryColor = useBrandingStore((s) => s.theme.primary);
+  const registerFocusedInput = useRegisterFocusedInput();
+
+  // Single ref object that is both forwarded (programmatic focus) and used
+  // internally for keyboard auto-scroll registration.
+  const innerRef = useRef<TextInput | null>(null);
+  const setInputRef = useCallback(
+    (node: TextInput | null) => {
+      innerRef.current = node;
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    },
+    [ref],
+  );
 
   // Ref-based callbacks — eternally stable, never cause re-renders
   const onFocusRef = useRef(externalOnFocus);
@@ -44,12 +59,16 @@ export const Input = memo(function Input({
   const onBlurRef = useRef(externalOnBlur);
   onBlurRef.current = externalOnBlur;
 
-  const handleFocus = useCallback((e: any) => {
-    setIsFocused(true);
-    onFocusRef.current?.(e);
-  }, []);
+  const handleFocus = useCallback<NonNullable<TextInputProps["onFocus"]>>(
+    (e) => {
+      setIsFocused(true);
+      registerFocusedInput(innerRef.current);
+      onFocusRef.current?.(e);
+    },
+    [registerFocusedInput],
+  );
 
-  const handleBlur = useCallback((e: any) => {
+  const handleBlur = useCallback<NonNullable<TextInputProps["onBlur"]>>((e) => {
     setIsFocused(false);
     onBlurRef.current?.(e);
   }, []);
@@ -86,6 +105,7 @@ export const Input = memo(function Input({
           </View>
         )}
         <TextInput
+          ref={setInputRef}
           className={[INPUT_CLASS, className].filter(Boolean).join(" ")}
           placeholderTextColor="#94A3B8"
           selectionColor={primaryColor}
@@ -118,4 +138,5 @@ export const Input = memo(function Input({
       )}
     </View>
   );
-});
+  }),
+);
