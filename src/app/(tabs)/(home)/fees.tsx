@@ -235,7 +235,7 @@ export default function FeesScreen() {
                         }}
                       >
                         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: item.paid > 0 ? colors.success : colors.textTertiary, marginRight: spacing.md }} />
-                        <Text style={{ flex: 1, fontSize: 14, color: colors.textSecondary, lineHeight: 19 }} numberOfLines={1}>
+                        <Text style={{ flex: 1, fontSize: 14, color: colors.textSecondary, lineHeight: 19, flexShrink: 1 }} numberOfLines={2}>
                           {item.fee_category ?? `Item #${item.id}`}
                         </Text>
                         <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, marginRight: spacing.md, lineHeight: 19 }}>
@@ -300,7 +300,7 @@ export default function FeesScreen() {
                         <Ionicons name="receipt-outline" size={20} color={colors.success} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }} numberOfLines={1}>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }} numberOfLines={2}>
                           {items[0]?.fee_category ?? `Fee #${fee.id}`}
                         </Text>
                         <Text style={{ fontSize: 12, lineHeight: 16, color: colors.textSecondary, marginTop: 2 }}>

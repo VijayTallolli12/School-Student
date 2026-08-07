@@ -37,6 +37,7 @@ export default function StudentProfileScreen() {
               onPress={() => router.back()}
               className="w-8 h-8 items-center justify-center -ml-1 mr-2"
               activeOpacity={0.7}
+              hitSlop={10}
             >
               <Ionicons name="chevron-back" size={22} color="#475569" />
             </TouchableOpacity>

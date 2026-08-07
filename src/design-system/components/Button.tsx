@@ -28,7 +28,7 @@ export interface ButtonProps {
 }
 
 const SIZES: Record<ButtonSize, { h: number; px: number; fontSize: number }> = {
-  sm: { h: 40, px: spacing.lg, fontSize: 14 },
+  sm: { h: 44, px: spacing.lg, fontSize: 14 },
   md: { h: 48, px: spacing.xl, fontSize: 15 },
   lg: { h: 54, px: spacing["2xl"], fontSize: 16 },
 };

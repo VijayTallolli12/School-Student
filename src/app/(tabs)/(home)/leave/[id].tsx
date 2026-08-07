@@ -67,7 +67,7 @@ export default function LeaveDetailScreen() {
       <SafeAreaView className="flex-1 bg-surface-background">
         <View className="bg-white px-5 pt-3 pb-3 border-b border-slate-100">
           <View className="flex-row items-center">
-            <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center -ml-1 mr-2" activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center -ml-1 mr-2" activeOpacity={0.7} hitSlop={10}>
               <Ionicons name="chevron-back" size={22} color="#475569" />
             </TouchableOpacity>
             <Text className="text-slate-900 text-lg font-bold tracking-tight">Leave Details</Text>
@@ -88,7 +88,7 @@ export default function LeaveDetailScreen() {
     <SafeAreaView className="flex-1 bg-surface-background">
       <View className="bg-white px-5 pt-3 pb-3 border-b border-slate-100">
         <View className="flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center -ml-1 mr-2" activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center -ml-1 mr-2" activeOpacity={0.7} hitSlop={10}>
             <Ionicons name="chevron-back" size={22} color="#475569" />
           </TouchableOpacity>
           <View className="flex-1">

@@ -127,7 +127,7 @@ export default function DocumentsScreen() {
                         </View>
                         <View style={{ flex: 1 }}>
                           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                            <Text style={{ flex: 1, ...typeScale.bodyStrong, color: colors.text }} numberOfLines={1}>
+                            <Text style={{ flex: 1, ...typeScale.bodyStrong, color: colors.text }} numberOfLines={2}>
                               {doc.title}
                             </Text>
                             <Tag label={isVerified ? "Verified" : "Pending"} tone={isVerified ? "success" : "warning"} />

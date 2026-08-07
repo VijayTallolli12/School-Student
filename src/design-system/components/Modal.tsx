@@ -10,15 +10,19 @@ import {
   Pressable,
   Animated,
   PanResponder,
-  Dimensions,
+  useWindowDimensions,
   type ViewStyle,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/design-system/theme";
 import { spacing, radius, elevation, zIndex, motion } from "@/design-system";
 
-const SHEET_HEIGHT = Dimensions.get("window").height * 0.6;
-
 const FILL: ViewStyle = { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 };
+
+/** Share of the window height the sheet can use (capped for small/landscape). */
+function sheetHeightFor(windowHeight: number): number {
+  return Math.min(windowHeight * 0.6, 520);
+}
 
 export interface BottomSheetProps {
   visible: boolean;
@@ -36,7 +40,10 @@ export const BottomSheet = memo(function BottomSheet({
   disableSwipe = false,
 }: BottomSheetProps) {
   const { colors } = useTheme();
-  const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const sheetHeight = sheetHeightFor(windowHeight);
+  const translateY = useRef(new Animated.Value(sheetHeight)).current;
   const scrimOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -46,16 +53,16 @@ export const BottomSheet = memo(function BottomSheet({
         Animated.timing(scrimOpacity, { toValue: 1, duration: motion.durationBase, useNativeDriver: true }),
       ]).start();
     } else {
-      Animated.timing(translateY, { toValue: SHEET_HEIGHT, duration: motion.durationFast, useNativeDriver: true }).start();
+      Animated.timing(translateY, { toValue: sheetHeight, duration: motion.durationFast, useNativeDriver: true }).start();
     }
-  }, [visible, translateY, scrimOpacity]);
+  }, [visible, translateY, scrimOpacity, sheetHeight]);
 
   const pan = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) => !disableSwipe && g.dy > 8,
       onPanResponderMove: (_, g) => translateY.setValue(Math.max(0, g.dy)),
       onPanResponderRelease: (_, g) => {
-        if (g.dy > SHEET_HEIGHT * 0.25) {
+        if (g.dy > sheetHeight * 0.25) {
           onClose();
         } else {
           Animated.spring(translateY, { toValue: 0, useNativeDriver: true, speed: 30, bounciness: 0 }).start();
@@ -78,7 +85,8 @@ export const BottomSheet = memo(function BottomSheet({
               backgroundColor: colors.card,
               borderTopLeftRadius: radius["2xl"],
               borderTopRightRadius: radius["2xl"],
-              paddingBottom: spacing["3xl"],
+              maxHeight: sheetHeight,
+              paddingBottom: Math.max(insets.bottom, spacing["3xl"]),
               elevation: elevation.overlay.elevation,
               shadowColor: elevation.overlay.shadowColor,
               shadowOffset: elevation.overlay.shadowOffset,

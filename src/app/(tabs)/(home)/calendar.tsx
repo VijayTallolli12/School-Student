@@ -107,6 +107,7 @@ export default function CalendarScreen() {
           <TouchableOpacity
             onPress={prevMonth}
             accessibilityLabel="Previous month"
+            hitSlop={6}
             style={{ width: 36, height: 36, backgroundColor: colors.surfaceSubtle, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" }}
           >
             <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />
@@ -117,6 +118,7 @@ export default function CalendarScreen() {
           <TouchableOpacity
             onPress={nextMonth}
             accessibilityLabel="Next month"
+            hitSlop={6}
             style={{ width: 36, height: 36, backgroundColor: colors.surfaceSubtle, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" }}
           >
             <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { router } from "expo-router";
 import { View, Text, Animated, Image } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "@/store/auth.store";
 import { useBrandingStore } from "@/store/branding.store";
 import { getAccessToken } from "@/utils/secureTokens";
@@ -43,9 +44,10 @@ export default function SplashScreen() {
   const hasLogo = !!branding.schoolLogo;
 
   return (
-    <View
+    <SafeAreaView
       className="flex-1 items-center justify-center"
       style={{ backgroundColor: branding.primaryColor }}
+      edges={["top", "left", "right", "bottom"]}
     >
       <Animated.View
         style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}
@@ -82,6 +84,6 @@ export default function SplashScreen() {
           Version 1.0.0
         </Text>
       </Animated.View>
-    </View>
+    </SafeAreaView>
   );
 }

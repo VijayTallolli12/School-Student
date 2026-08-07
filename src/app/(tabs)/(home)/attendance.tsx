@@ -6,8 +6,8 @@ import { useAuthStore } from "@/store/auth.store";
 import { fetchAttendance, getErrorMessage } from "@/services/api";
 import type { AttendanceRecord } from "@/types";
 import { useTheme } from "@/design-system/theme";
-import { spacing, radius, typeScale } from "@/design-system";
-import { AppContainer, AppHeader, StatCard, ProgressRing } from "@/design-system/components";
+import { spacing, radius, typeScale, useAdaptiveColumns } from "@/design-system";
+import { AppContainer, AppHeader, StatCard, ProgressRing, Grid } from "@/design-system/components";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -24,6 +24,7 @@ function statusColor(status: string | null, colors: Record<string, string>): str
 
 export default function AttendanceScreen() {
   const { colors } = useTheme();
+  const attStatColumns = useAdaptiveColumns({ phone: 2, phoneLg: 3, tablet: 3, desktop: 4 });
   const students = useAuthStore((s) => s.students);
   const studentUuid = useAuthStore((s) => s.studentUuid) ?? students?.[0]?.uuid;
 
@@ -186,17 +187,11 @@ export default function AttendanceScreen() {
         </View>
       ) : (
         <>
-          <View style={{ flexDirection: "row", gap: spacing.md, marginBottom: spacing.xl }}>
-            <View style={{ flex: 1 }}>
+          <Grid columns={attStatColumns} gap={spacing.md} style={{ marginBottom: spacing.xl }}>
               <StatCard label="Present" value={String(present + late + halfDay)} icon="checkmark-circle-outline" color={colors.success} />
-            </View>
-            <View style={{ flex: 1 }}>
               <StatCard label="Absent" value={String(absent)} icon="close-circle-outline" color={colors.error} />
-            </View>
-            <View style={{ flex: 1 }}>
               <StatCard label="Late" value={String(late)} icon="time-outline" color={colors.warning} />
-            </View>
-          </View>
+            </Grid>
 
           <View
             style={{
@@ -260,6 +255,7 @@ export default function AttendanceScreen() {
               <TouchableOpacity
                 onPress={prevMonth}
                 accessibilityLabel="Previous month"
+                hitSlop={6}
                 style={{ width: 36, height: 36, backgroundColor: colors.surfaceSubtle, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />
@@ -270,6 +266,7 @@ export default function AttendanceScreen() {
               <TouchableOpacity
                 onPress={nextMonth}
                 accessibilityLabel="Next month"
+                hitSlop={6}
                 style={{ width: 36, height: 36, backgroundColor: colors.surfaceSubtle, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" }}
               >
                 <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />

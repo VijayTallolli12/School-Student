@@ -58,7 +58,7 @@ export const AttendanceCard = memo(function AttendanceCard({
             {snapshot.present} present · {snapshot.absent} absent · {snapshot.late} late
           </Text>
         </View>
-        <View style={{ width: 110, marginLeft: spacing.lg }}>
+        <View style={{ flexShrink: 0, marginLeft: spacing.lg, width: "26%", minWidth: 72, maxWidth: 120 }}>
           <ProgressBar value={pct / 100} color={statusC} height={8} />
         </View>
       </View>

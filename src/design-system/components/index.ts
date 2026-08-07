@@ -54,3 +54,5 @@ export { TransportCard } from "./TransportCard";
 export type { TransportSnapshot } from "./TransportCard";
 export { FloatingActionButton } from "./FloatingActionButton";
 export type { FABProps } from "./FloatingActionButton";
+export { Grid } from "./Grid";
+export type { GridProps } from "./Grid";

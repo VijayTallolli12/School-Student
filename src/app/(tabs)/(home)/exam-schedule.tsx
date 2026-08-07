@@ -91,7 +91,7 @@ export default function ExamScheduleScreen() {
               <Card padding="lg">
                 <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
                   <View style={{ flex: 1, marginRight: spacing.md }}>
-                    <Text style={{ ...typeScale.bodyStrong, color: colors.text }} numberOfLines={1}>
+                    <Text style={{ ...typeScale.bodyStrong, color: colors.text }} numberOfLines={2}>
                       {exam.exam_name}
                     </Text>
                     <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: spacing.xs }}>

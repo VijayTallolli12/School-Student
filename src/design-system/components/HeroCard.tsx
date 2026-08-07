@@ -1,15 +1,17 @@
 /**
  * HeroCard — Design System. Premium greeting hero for the dashboard.
- * Combines: greeting + date, student avatar (photo, ringed), subtle school
- * branding, a single dynamic contextual message, and student info line.
- * Kept compact (~25% shorter than legacy) to reduce dashboard scroll.
+ * Fully responsive: no fixed heights, flexible text column (names/class info
+ * wrap or auto-shrink instead of clipping), proportional avatar sizing and
+ * automatic height so nothing is ever cropped on small phones, landscape or
+ * tablet widths.
  */
 import { memo } from "react";
-import { View, Text, Image } from "react-native";
+import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Avatar } from "./Avatar";
 import { useTheme } from "@/design-system/theme";
 import { spacing, radius, typeScale } from "@/design-system";
+import { useScreenSize } from "@/design-system/responsive";
 
 export interface HeroCardProps {
   greeting: string;
@@ -31,24 +33,26 @@ export const HeroCard = memo(function HeroCard({
   studentName,
   classLine,
   avatarUri,
-  schoolLogo,
-  schoolName,
   context,
   streak,
 }: HeroCardProps) {
   const { colors } = useTheme();
+  const { isSmallPhone, isTablet } = useScreenSize();
+
+  // Avatar scales with screen width: 72 on small phones, 96 on tablets/large.
+  const avatarSize = isSmallPhone ? "xl" : isTablet ? "hero" : "xl";
+  const horizontalPad = isSmallPhone ? spacing.lg : spacing.xl;
 
   return (
     <View
       style={{
         backgroundColor: colors.brand,
         borderRadius: radius["2xl"],
-        padding: spacing.lg,
+        padding: horizontalPad,
         overflow: "hidden",
-        minHeight: 150,
       }}
     >
-      {/* Decorative soft circles */}
+      {/* Decorative soft circles — clipped by overflow, never layout-critical */}
       <View
         pointerEvents="none"
         style={{
@@ -75,38 +79,48 @@ export const HeroCard = memo(function HeroCard({
       />
 
       <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-        <View style={{ flex: 1, zIndex: 1, paddingRight: spacing.md }}>
+        {/* Text column shrinks first so long names never push the avatar off-screen */}
+        <View style={{ flex: 1, flexShrink: 1, zIndex: 1, paddingRight: spacing.md, minWidth: 0 }}>
           <Text
-            style={{ fontSize: 13, lineHeight: 18, color: "rgba(255,255,255,0.85)", fontWeight: "600" }}
+            style={{ fontSize: 13, lineHeight: 18, color: "rgba(255,255,255,0.85)", fontWeight: "600", flexShrink: 1 }}
             numberOfLines={1}
-            accessibilityLabel={`${greeting}, ${dateLine}`}
+            accessibilityLabel={greeting}
           >
-            {greeting} · {dateLine}
+            {greeting}
+          </Text>
+          <Text
+            style={{ fontSize: 12, lineHeight: 17, color: "rgba(255,255,255,0.7)", fontWeight: "500", marginTop: 2, flexShrink: 1 }}
+            numberOfLines={1}
+          >
+            {dateLine}
           </Text>
           <Text
             accessibilityRole="header"
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            numberOfLines={2}
             style={{
               ...typeScale.headlineSm,
               color: "#FFFFFF",
               marginTop: spacing.xs,
               lineHeight: 32,
+              flexShrink: 1,
             }}
-            numberOfLines={1}
           >
             {studentName}
           </Text>
           {context ? (
             <Text
-              style={{ fontSize: 13, lineHeight: 19, color: "rgba(255,255,255,0.92)", fontWeight: "500", marginTop: spacing.xs }}
-              numberOfLines={1}
+              style={{ fontSize: 13, lineHeight: 19, color: "rgba(255,255,255,0.92)", fontWeight: "500", marginTop: spacing.xs, flexShrink: 1 }}
+              numberOfLines={2}
             >
               {context}
             </Text>
           ) : null}
         </View>
 
-        {/* Avatar — premium ringed photo with a little breathing room */}
-        <View style={{ zIndex: 1, marginLeft: spacing.sm, padding: 2 }}>
+        {/* Avatar — ringed photo, scales proportionally with screen width */}
+        <View style={{ zIndex: 1, marginLeft: spacing.sm, padding: 2, flexShrink: 0 }}>
           <View
             style={{
               borderRadius: radius.full,
@@ -119,16 +133,24 @@ export const HeroCard = memo(function HeroCard({
               elevation: 4,
             }}
           >
-            <Avatar uri={avatarUri} name={studentName} size="xl" />
+            <Avatar uri={avatarUri} name={studentName} size={avatarSize} />
           </View>
         </View>
       </View>
 
-      {/* Student info + prominent school badge */}
-      <View style={{ flexDirection: "row", alignItems: "center", marginTop: spacing.md, zIndex: 1 }}>
+      {/* Student info + school badge — row wraps so nothing overlaps */}
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          alignItems: "center",
+          marginTop: spacing.md,
+          zIndex: 1,
+        }}
+      >
         {classLine ? (
           <Text
-            style={{ flex: 1, color: "rgba(255,255,255,0.85)", fontSize: 12.5, lineHeight: 18, fontWeight: "600" }}
+            style={{ flex: 1, flexShrink: 1, color: "rgba(255,255,255,0.85)", fontSize: 12.5, lineHeight: 18, fontWeight: "600", minWidth: 0 }}
             numberOfLines={1}
           >
             {classLine}
@@ -146,40 +168,12 @@ export const HeroCard = memo(function HeroCard({
               borderRadius: radius.full,
               paddingHorizontal: spacing.sm,
               height: 26,
-              marginRight: spacing.sm,
+              marginLeft: spacing.sm,
             }}
           >
             <Ionicons name="flame" size={14} color="#FFD60A" />
             <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 12, marginLeft: 4, lineHeight: 16 }}>
               {streak}
-            </Text>
-          </View>
-        ) : null}
-
-        {schoolLogo || schoolName ? (
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: "rgba(255,255,255,0.2)",
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.45)",
-              borderRadius: radius.full,
-              paddingHorizontal: spacing.md,
-              height: 28,
-              overflow: "hidden",
-            }}
-          >
-            {schoolLogo ? (
-              <Image source={{ uri: schoolLogo }} style={{ width: 18, height: 18, borderRadius: 9 }} accessibilityIgnoresInvertColors />
-            ) : (
-              <Ionicons name="school" size={14} color="#FFFFFF" />
-            )}
-            <Text
-              style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 12, marginLeft: 6, lineHeight: 18 }}
-              numberOfLines={1}
-            >
-              {schoolName || "School"}
             </Text>
           </View>
         ) : null}

@@ -9,7 +9,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardScrollView } from "./KeyboardScrollView";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/design-system/theme";
-import { spacing, safeArea, typeScale, zIndex } from "@/design-system";
+import { spacing, safeArea, typeScale, zIndex, MAX_CONTENT_WIDTH } from "@/design-system";
+import { useScreenSize } from "@/design-system/responsive";
 
 export interface AppContainerProps {
   children: ReactNode;
@@ -18,6 +19,8 @@ export interface AppContainerProps {
   contentStyle?: ViewStyle;
   /** Remove horizontal gutter for edge-to-edge hero. */
   fullBleed?: boolean;
+  /** Cap content width on tablets/landscape (auto-enabled; set 0 to disable). */
+  maxContentWidth?: number;
 }
 
 export const AppContainer = memo(function AppContainer({
@@ -26,9 +29,17 @@ export const AppContainer = memo(function AppContainer({
   scrollProps,
   contentStyle,
   fullBleed = false,
+  maxContentWidth = MAX_CONTENT_WIDTH,
 }: AppContainerProps) {
   const { colors } = useTheme();
+  const { isTablet } = useScreenSize();
   const pad = fullBleed ? 0 : safeArea.horizontal;
+
+  // On tablets / landscape, keep content readable instead of stretching full width.
+  const contentCap: ViewStyle | undefined =
+    isTablet && maxContentWidth > 0
+      ? { width: "100%", maxWidth: maxContentWidth, alignSelf: "center" }
+      : undefined;
 
   const inner = (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -38,10 +49,12 @@ export const AppContainer = memo(function AppContainer({
           contentContainerStyle={{ paddingHorizontal: pad, paddingBottom: spacing["6xl"], ...contentStyle }}
           {...scrollProps}
         >
-          {children}
+          {contentCap ? <View style={contentCap}>{children}</View> : children}
         </KeyboardScrollView>
       ) : (
-        <View style={{ flex: 1, paddingHorizontal: pad, ...contentStyle }}>{children}</View>
+        <View style={{ flex: 1, paddingHorizontal: pad, ...contentStyle }}>
+          {contentCap ? <View style={contentCap}>{children}</View> : children}
+        </View>
       )}
     </View>
   );

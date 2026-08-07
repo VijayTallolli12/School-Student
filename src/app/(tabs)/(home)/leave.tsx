@@ -9,6 +9,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { fetchLeaveRequests, getErrorMessage } from "@/services/api";
 import type { LeaveRequest } from "@/types";
 import { OfflineState } from "@/components/ui/OfflineState";
+import { useAdaptiveColumns, spacing } from "@/design-system";
+import { Grid } from "@/design-system/components";
 
 const STATUS_STYLES: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   pending: { label: "Pending", color: "#F59E0B", bg: "bg-amber-50", icon: "time" },
@@ -60,6 +62,7 @@ export default function LeaveListScreen() {
   const pending = requests.filter((r) => r.status === "pending").length;
   const approved = requests.filter((r) => r.status === "approved").length;
   const rejected = requests.filter((r) => r.status === "rejected").length;
+  const summaryColumns = useAdaptiveColumns({ phone: 2, phoneLg: 3, tablet: 3, desktop: 4 });
 
   const sorted = [...requests].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -73,6 +76,7 @@ export default function LeaveListScreen() {
             onPress={() => router.back()}
             className="w-8 h-8 items-center justify-center -ml-1 mr-2"
             activeOpacity={0.7}
+            hitSlop={10}
           >
             <Ionicons name="chevron-back" size={22} color="#475569" />
           </TouchableOpacity>
@@ -114,7 +118,7 @@ export default function LeaveListScreen() {
           />
         ) : (
           <>
-            <View className="flex-row gap-2 mb-4">
+            <Grid columns={summaryColumns} gap={spacing.sm} style={{ marginBottom: spacing.lg }}>
               <Card padding="sm" className="flex-1 items-center">
                 <Text className="text-amber-600 text-lg font-bold">{pending}</Text>
                 <Text className="text-slate-400 text-xs mt-0.5">Pending</Text>
@@ -127,7 +131,7 @@ export default function LeaveListScreen() {
                 <Text className="text-red-600 text-lg font-bold">{rejected}</Text>
                 <Text className="text-slate-400 text-xs mt-0.5">Rejected</Text>
               </Card>
-            </View>
+            </Grid>
 
             <View className="gap-3 mb-8">
               {sorted.map((req) => {
@@ -154,7 +158,7 @@ export default function LeaveListScreen() {
                           </View>
                           <View className="flex-1 ml-3">
                             <View className="flex-row items-center justify-between">
-                              <Text className="text-slate-900 text-sm font-bold flex-1 mr-2" numberOfLines={1}>
+                              <Text className="text-slate-900 text-sm font-bold flex-1 mr-2" numberOfLines={2}>
                                 {req.leave_type} Leave
                               </Text>
                               <View className={`px-2.5 py-1 rounded-lg ${ss.bg} shrink-0`}>
@@ -175,7 +179,7 @@ export default function LeaveListScreen() {
                               <Ionicons name="arrow-forward" size={12} color="#CBD5E1" />
                               <Text className="text-slate-400 text-xs">{formatDate(req.to_date)}</Text>
                             </View>
-                            <Text className="text-slate-500 text-xs mt-1.5 leading-4" numberOfLines={1}>
+                            <Text className="text-slate-500 text-xs mt-1.5 leading-4" numberOfLines={2}>
                               {req.reason}
                             </Text>
                           </View>

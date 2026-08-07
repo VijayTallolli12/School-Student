@@ -7,7 +7,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { fetchDashboard, fetchDashboardHighlights, getErrorMessage } from "@/services/api";
 import type { DashboardData, DashboardHighlights, NotificationItem } from "@/types";
 import { useTheme } from "@/design-system/theme";
-import { spacing, radius } from "@/design-system";
+import { spacing, radius, useAdaptiveColumns, useScreenSize } from "@/design-system";
 import {
   AppContainer,
   HeroCard,
@@ -21,6 +21,7 @@ import {
   ErrorState,
   FadeInView,
   Skeleton,
+  Grid,
 } from "@/design-system/components";
 import type { AttendanceSnapshot } from "@/design-system/components";
 
@@ -82,6 +83,9 @@ export default function DashboardScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const { colors } = useTheme();
+  const { isTablet } = useScreenSize();
+  const statColumns = useAdaptiveColumns({ phone: 2, phoneLg: 3, tablet: 3, desktop: 4 });
+  const quickColumns = isTablet ? 4 : 2;
   const branding = useBrandingStore((s) => s.branding);
   const refreshBranding = useBrandingStore((s) => s.refreshBranding);
   const authStudents = useAuthStore((s) => s.students);
@@ -385,14 +389,13 @@ export default function DashboardScreen() {
 
           <FadeInView index={2} style={{ marginBottom: spacing.lg }}>
             <SectionHeader title="At a glance" actionLabel="Academics" onAction={handleViewAll} />
-            <View style={{ flexDirection: "row", gap: spacing.md, marginTop: spacing.sm }}>
+            <Grid columns={statColumns} gap={spacing.md} style={{ marginTop: spacing.sm }}>
               <StatCard
                 label="Attendance"
                 value={`${attendancePct}%`}
                 icon="calendar-outline"
                 color={attendancePct >= 75 ? colors.success : colors.warning}
                 subtitle={attSummary ? `${attSummary.present} present · ${attSummary.absent} absent` : undefined}
-                emphasized
               />
               <StatCard
                 label="Fee pending"
@@ -409,12 +412,12 @@ export default function DashboardScreen() {
                 color={colors.brand}
                 subtitle={examsSummary ? `${examsSummary.subjects} subjects` : "Performance"}
               />
-            </View>
+            </Grid>
           </FadeInView>
 
           <FadeInView index={3} style={{ marginBottom: spacing["2xl"] }}>
             <SectionHeader title="Quick actions" actionLabel="All modules" onAction={handleViewAll} />
-            <View style={{ flexDirection: "row", gap: spacing.md, marginTop: spacing.sm, marginBottom: spacing.md }}>
+            <Grid columns={quickColumns} gap={spacing.md} style={{ marginTop: spacing.sm }}>
               <QuickActionButton
                 label="Homework"
                 icon="book-outline"
@@ -427,8 +430,6 @@ export default function DashboardScreen() {
                 color={colors.success}
                 onPress={() => router.push("/attendance" as Href)}
               />
-            </View>
-            <View style={{ flexDirection: "row", gap: spacing.md }}>
               <QuickActionButton
                 label="Exams"
                 icon="ribbon-outline"
@@ -441,7 +442,7 @@ export default function DashboardScreen() {
                 color={colors.info}
                 onPress={() => router.push("/fees" as Href)}
               />
-            </View>
+            </Grid>
           </FadeInView>
 
           <FadeInView index={4} style={{ marginBottom: spacing.xl }}>
