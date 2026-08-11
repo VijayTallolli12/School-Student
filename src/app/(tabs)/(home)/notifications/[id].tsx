@@ -1,10 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useTheme, spacing, radius, typeScale } from "@/design-system";
 import { AppContainer, AppHeader, Card, Tag, EmptyState } from "@/design-system/components";
-import { markNotificationRead } from "@/services/api";
+import { fetchNotificationDetail, markNotificationRead } from "@/services/api";
+import type { NotificationItem } from "@/types";
 
 const TYPE_META: Record<string, { icon: keyof typeof Ionicons.glyphMap; label: string }> = {
   attendance: { icon: "calendar-outline", label: "Attendance" },
@@ -46,6 +47,8 @@ function formatDate(dateStr: string): string {
 
 export default function NotificationDetailScreen() {
   const params = useLocalSearchParams<Record<string, string>>();
+  const [detail, setDetail] = useState<NotificationItem | null>(null);
+  const [loading, setLoading] = useState(true);
   const [marked, setMarked] = useState(false);
   const [marking, setMarking] = useState(false);
 
@@ -57,6 +60,29 @@ export default function NotificationDetailScreen() {
   const type = params.type ?? "general";
   const isRead = params.is_read === "true";
   const createdAt = params.created_at ?? "";
+
+  useEffect(() => {
+    const loadDetail = async () => {
+      if (id === null) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const data = await fetchNotificationDetail(id);
+        setDetail(data);
+      } catch {
+        setDetail(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDetail();
+  }, [id]);
+
+  const detailTitle = detail?.title ?? title;
+  const detailBody = detail?.body ?? body;
+  const detailCreatedAt = detail?.created_at ?? createdAt;
+  const detailIsRead = detail ? detail.is_read : isRead;
 
   const meta = TYPE_META[type] ?? TYPE_META.general;
   const tone = TYPE_TONE[type] ?? "neutral";
@@ -71,7 +97,7 @@ export default function NotificationDetailScreen() {
   }, []);
 
   const handleMarkAsRead = useCallback(async () => {
-    if (id === null || marked || isRead) return;
+    if (id === null || marked || detailIsRead) return;
     setMarking(true);
     try {
       await markNotificationRead(id);
@@ -81,7 +107,7 @@ export default function NotificationDetailScreen() {
     } finally {
       setMarking(false);
     }
-  }, [id, marked, isRead]);
+  }, [id, marked, detailIsRead]);
 
   if (!id) {
     return (
@@ -103,7 +129,7 @@ export default function NotificationDetailScreen() {
         showBack
         onBack={handleBack}
         right={
-          !isRead && !marked ? (
+          !detailIsRead && !marked ? (
             <Pressable
               onPress={handleMarkAsRead}
               disabled={marking}
@@ -139,14 +165,14 @@ export default function NotificationDetailScreen() {
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.sm }}>
               <Tag label={meta.label} tone={tone} />
-              {!isRead && !marked && <Tag label="New" tone="info" />}
-              {(isRead || marked) && <Tag label="Read" tone="neutral" />}
+              {!detailIsRead && !marked && <Tag label="New" tone="info" />}
+              {(detailIsRead || marked) && <Tag label="Read" tone="neutral" />}
             </View>
             <Text style={{ ...typeScale.title, color: colors.text }}>
-              {title || "Untitled Notification"}
+              {detailTitle || "Untitled Notification"}
             </Text>
             <Text style={{ ...typeScale.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-              {createdAt ? formatDate(createdAt) : ""}
+              {detailCreatedAt ? formatDate(detailCreatedAt) : ""}
             </Text>
           </View>
         </View>
@@ -156,9 +182,15 @@ export default function NotificationDetailScreen() {
         <Text style={{ ...typeScale.overline, color: colors.textMuted, marginBottom: spacing.sm }}>
           Message
         </Text>
-        <Text style={{ ...typeScale.body, lineHeight: 24, color: colors.text }}>
-          {body || "No additional details available for this notification."}
-        </Text>
+        {loading && !detailBody ? (
+          <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+            <ActivityIndicator size="small" color={colors.brand} />
+          </View>
+        ) : (
+          <Text style={{ ...typeScale.body, lineHeight: 24, color: colors.text }}>
+            {detailBody || "No additional details available for this notification."}
+          </Text>
+        )}
       </Card>
     </AppContainer>
   );

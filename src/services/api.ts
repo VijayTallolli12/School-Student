@@ -1,5 +1,5 @@
 import { create, AxiosError, InternalAxiosRequestConfig } from "axios";
-import { API_BASE_URL, getFallbackApiBaseUrl } from "@/config/api";
+import { API_BASE_URL, getFallbackApiBaseUrl, isFallbackApiConfigured } from "@/config/api";
 import { storage } from "@/utils/storage";
 import { STORAGE_KEYS } from "@/constants/config";
 import { useAuthStore } from "@/store/auth.store";
@@ -25,6 +25,7 @@ import type {
   StudentDocument,
   StudentFee,
   TimetableData,
+  TimetableSlot,
   TransportDashboardData,
   TransportData,
   TransportStop,
@@ -55,8 +56,10 @@ let useFallbackApi = false;
 
 function switchToFallbackApi(): void {
   if (!useFallbackApi) {
-    console.log("[API] Switching to fallback API:", getFallbackApiBaseUrl());
-    apiClient.defaults.baseURL = getFallbackApiBaseUrl();
+    const fallbackUrl = getFallbackApiBaseUrl();
+    if (!fallbackUrl) return;
+    console.log("[API] Switching to fallback API:", fallbackUrl);
+    apiClient.defaults.baseURL = fallbackUrl;
     useFallbackApi = true;
   }
 }
@@ -187,7 +190,7 @@ apiClient.interceptors.response.use(
 
     const isNetworkOrTimeout = isNetworkError(error) || isTimeoutError(error);
 
-    if (isNetworkOrTimeout && config && !config._fallbackAttempted && !useFallbackApi) {
+    if (isNetworkOrTimeout && config && !config._fallbackAttempted && !useFallbackApi && isFallbackApiConfigured()) {
       config._fallbackAttempted = true;
       console.log("[API] Network/timeout error, attempting fallback API...");
       switchToFallbackApi();
@@ -339,7 +342,7 @@ function normalizeDashboardNotifications(payload: Record<string, unknown>): Noti
       body: ((rec.body as string) ?? (rec.message as string) ?? ""),
       type: ((rec.type as NotificationItem["type"]) ?? "general"),
       is_read: Boolean(rec.is_read),
-      created_at: (rec.created_at as string) ?? new Date().toISOString(),
+      created_at: (rec.created_at as string) ?? (rec.sent_at_iso as string) ?? new Date().toISOString(),
       data: toRecord(rec.data) ?? undefined,
     };
   });
@@ -441,9 +444,27 @@ export async function fetchExamResults(
   const res = await apiClient.get("/student/results");
   const payload = unwrap<Record<string, unknown>>(res);
   const root = toRecord(payload) ?? {};
-  const grouped = (toRecord(root.results_by_academic_year) ??
-    toRecord(root.results) ??
-    {}) as Record<string, ExamResultRecord[]>;
+  const grouped: Record<string, ExamResultRecord[]> = {};
+
+  const raw = root.results_by_academic_year ?? root.results;
+  if (Array.isArray(raw)) {
+    // Backend shape: [{ academic_year_id, results: [...] }, ...]
+    for (const group of raw) {
+      const g = toRecord(group);
+      if (!g) continue;
+      const key = String(g.academic_year_id ?? "Unknown");
+      grouped[key] = toArray<ExamResultRecord>(g.results);
+    }
+  } else {
+    // Backend shape: { "<yearId>": [result, ...], ... }
+    const obj = toRecord(raw);
+    if (obj) {
+      for (const [key, value] of Object.entries(obj)) {
+        grouped[key] = toArray<ExamResultRecord>(value);
+      }
+    }
+  }
+
   return {
     student: (toRecord(root.student) ?? {}) as Record<string, unknown>,
     results_by_academic_year: grouped,
@@ -456,7 +477,19 @@ export async function fetchTimetable(studentUuid: string): Promise<{ timetable: 
   const res = await apiClient.get("/student/timetable");
   const payload = unwrap<Record<string, unknown>>(res);
   const root = toRecord(payload) ?? {};
-  const timetable = (toRecord(root.timetable) ?? toRecord(root.schedule) ?? {}) as TimetableData;
+  const timetable: TimetableData = {};
+
+  // Backend shape: [{ day_of_week, day_name, slots: [...] }, ...] → key by day number
+  const rawDays = toArray<Record<string, unknown>>(root.timetable ?? root.schedule);
+  for (const day of rawDays) {
+    const dayRec = toRecord(day);
+    if (!dayRec) continue;
+    const dow = dayRec.day_of_week;
+    const key = typeof dow === "number" ? String(dow) : typeof dow === "string" ? dow : "";
+    if (!key) continue;
+    timetable[key] = toArray<TimetableSlot>(dayRec.slots);
+  }
+
   return { timetable };
 }
 
@@ -502,7 +535,7 @@ function normalizeNotification(raw: Record<string, unknown>): NotificationItem {
     body: ((raw.body as string) ?? (raw.message as string) ?? ""),
     type: NOTIFICATION_TYPE_MAP[raw.type as string] ?? "general",
     is_read: (raw.is_read as boolean) ?? false,
-    created_at: (raw.created_at as string) ?? "",
+    created_at: (raw.created_at as string) ?? (raw.sent_at_iso as string) ?? "",
     data: raw.data as Record<string, unknown> | undefined,
   };
 }
@@ -523,6 +556,12 @@ export async function fetchNotifications(page = 1): Promise<{
       total: toNumber(meta.total, rawItems.length),
     },
   };
+}
+
+export async function fetchNotificationDetail(id: number): Promise<NotificationItem> {
+  const res = await apiClient.get(`/student/notifications/${id}`);
+  const payload = unwrap<Record<string, unknown>>(res);
+  return normalizeNotification(toRecord(payload) ?? {});
 }
 
 export async function fetchUnreadCount(): Promise<{ count: number }> {
@@ -558,9 +597,9 @@ export async function fetchAssignments(_studentUuid: string): Promise<Assignment
 // ─── Exam Schedule ─────────────────────────────────────────────────
 
 export async function fetchExamSchedule(_studentUuid: string): Promise<ExamScheduleItem[]> {
-  const res = await apiClient.get("/student/exams");
+  const res = await apiClient.get("/student/exam-schedule");
   const payload = unwrap<Record<string, unknown>>(res);
-  return pickArray<ExamScheduleItem>(payload, ["schedules", "exam_schedule", "exams", "items", "data"]);
+  return pickArray<ExamScheduleItem>(payload, ["schedules", "exam_schedule", "items", "data"]);
 }
 
 // ─── Academic Calendar ──────────────────────────────────────────────
