@@ -41,7 +41,7 @@ export default function SettingsScreen() {
           <View style={{ flex: 1 }}>
             <Text style={{ ...typeScale.bodyStrong, color: colors.text }}>Push Notifications</Text>
             <Text style={{ ...typeScale.caption, color: colors.textSecondary, marginTop: 2 }}>
-              Receive alerts for attendance, fees and circulars.
+              Receive alerts for attendance, fees and announcements.
             </Text>
           </View>
           <Switch value={pushEnabled} onValueChange={setPushEnabled} />

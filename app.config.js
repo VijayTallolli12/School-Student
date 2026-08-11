@@ -16,6 +16,8 @@ function resolveProfile() {
 const profile = resolveProfile();
 const apiUrl = normalizeApiUrl(process.env.EXPO_PUBLIC_API_URL);
 
+const EAS_PROJECT_ID = "9d2d91c1-c334-49b0-b5c2-e9865b3c7a49";
+
 module.exports = {
   expo: {
     name: "School Student",
@@ -57,10 +59,18 @@ module.exports = {
     experiments: {
       typedRoutes: true,
     },
+    updates: {
+      url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
+      checkAutomatically: "ON_LOAD",
+      fallbackToCacheTimeout: 0,
+    },
+    runtimeVersion: {
+      policy: "appVersion",
+    },
     extra: {
       router: {},
       eas: {
-        projectId: "9d2d91c1-c334-49b0-b5c2-e9865b3c7a49",
+        projectId: EAS_PROJECT_ID,
       },
       profile,
       apiUrl,

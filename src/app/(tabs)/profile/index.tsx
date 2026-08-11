@@ -1,7 +1,6 @@
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "@/store/auth.store";
-import { useBrandingStore } from "@/store/branding.store";
 import { router, type Href } from "expo-router";
 import { secureLogout } from "@/services/api";
 import { useTheme, spacing, radius, typeScale } from "@/design-system";
@@ -20,7 +19,7 @@ export default function ProfileScreen() {
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const students = useAuthStore((s) => s.students);
-  const branding = useBrandingStore((s) => s.branding);
+  const studentUuid = useAuthStore((s) => s.studentUuid);
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -40,19 +39,24 @@ export default function ProfileScreen() {
     router.push(route as Href);
   };
 
-  const schoolName = branding.schoolName || "School ERP";
+  const selectedStudent = students.find((s) => s.uuid === studentUuid) ?? students[0] ?? null;
+  const studentName = selectedStudent?.name || user?.name || "Student";
+  const studentClassLine = selectedStudent
+    ? `Class ${selectedStudent.class}-${selectedStudent.section} • Roll: ${selectedStudent.roll_number}`
+    : null;
+  const studentAvatar = selectedStudent?.avatar_url || user?.avatar_url || null;
 
   return (
     <AppContainer>
       <AppHeader title="Profile" />
 
       <Card padding="lg" style={{ alignItems: "center", marginBottom: spacing.lg }}>
-        <Avatar uri={branding.schoolLogo as string} name={schoolName} size="xl" ring />
+        <Avatar uri={studentAvatar} name={studentName} size="xl" ring />
         <Text style={{ ...typeScale.title, color: colors.text, marginTop: spacing.md }}>
-          {schoolName}
+          {studentName}
         </Text>
         <Text style={{ ...typeScale.bodySm, color: colors.textSecondary, marginTop: spacing.xs }}>
-          {user?.email || "student@school.com"}
+          {studentClassLine || user?.email || "student@school.com"}
         </Text>
       </Card>
 

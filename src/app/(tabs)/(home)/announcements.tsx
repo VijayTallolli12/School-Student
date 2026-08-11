@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, ActivityIndicator, RefreshControl } from "react-native";
 import { router } from "expo-router";
 import { useTheme, spacing } from "@/design-system";
-import { AppContainer, AppHeader, Badge, Button, CircularCard, EmptyState, ErrorState, FadeInView } from "@/design-system/components";
-import { fetchCirculars, getErrorMessage } from "@/services/api";
-import type { CircularItem } from "@/types";
+import { AppContainer, AppHeader, Badge, Button, AnnouncementCard, EmptyState, ErrorState, FadeInView } from "@/design-system/components";
+import { fetchAnnouncements, getErrorMessage } from "@/services/api";
+import type { AnnouncementItem } from "@/types";
 
-export default function CircularsScreen() {
-  const [circulars, setCirculars] = useState<CircularItem[]>([]);
+export default function AnnouncementsScreen() {
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [meta, setMeta] = useState<{ current_page: number; last_page: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -16,14 +16,14 @@ export default function CircularsScreen() {
 
   const { colors } = useTheme();
 
-  const loadCirculars = useCallback(async (page = 1, append = false) => {
+  const loadAnnouncements = useCallback(async (page = 1, append = false) => {
     try {
       setError(null);
-      const result = await fetchCirculars(page);
+      const result = await fetchAnnouncements(page);
       if (append) {
-        setCirculars((prev) => [...prev, ...result.data]);
+        setAnnouncements((prev) => [...prev, ...result.data]);
       } else {
-        setCirculars(result.data);
+        setAnnouncements(result.data);
       }
       setMeta(result.meta);
     } catch (err: unknown) {
@@ -36,23 +36,23 @@ export default function CircularsScreen() {
   }, []);
 
   useEffect(() => {
-    loadCirculars();
-  }, [loadCirculars]);
+    loadAnnouncements();
+  }, [loadAnnouncements]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadCirculars();
-  }, [loadCirculars]);
+    await loadAnnouncements();
+  }, [loadAnnouncements]);
 
   const handleLoadMore = useCallback(async () => {
     if (!meta || meta.current_page >= meta.last_page || loadingMore) return;
     setLoadingMore(true);
-    await loadCirculars(meta.current_page + 1, true);
-  }, [meta, loadingMore, loadCirculars]);
+    await loadAnnouncements(meta.current_page + 1, true);
+  }, [meta, loadingMore, loadAnnouncements]);
 
-  const handleOpen = useCallback((item: CircularItem) => {
+  const handleOpen = useCallback((item: AnnouncementItem) => {
     router.push({
-      pathname: "/circulars/[id]",
+      pathname: "/announcements/[id]",
       params: {
         id: String(item.id),
         title: item.title ?? "",
@@ -85,7 +85,7 @@ export default function CircularsScreen() {
       }}
     >
       <AppHeader
-        title="Circulars"
+        title="Announcements"
         showBack
         onBack={() => router.back()}
         right={meta ? <Badge count={meta.total} tone="brand" /> : undefined}
@@ -94,21 +94,21 @@ export default function CircularsScreen() {
       {loading ? (
         <View style={{ alignItems: "center", justifyContent: "center", paddingTop: 96 }}>
           <ActivityIndicator size="large" color={colors.brand} />
-          <Text style={{ color: colors.textSecondary, marginTop: spacing.md, fontSize: 14 }}>Loading circulars...</Text>
+          <Text style={{ color: colors.textSecondary, marginTop: spacing.md, fontSize: 14 }}>Loading announcements...</Text>
         </View>
       ) : error ? (
         <ErrorState message={error} onRetry={onRefresh} />
-      ) : circulars.length === 0 ? (
+      ) : announcements.length === 0 ? (
         <EmptyState
           icon="megaphone-outline"
-          title="No Circulars"
-          description="School circulars and announcements will appear here"
+          title="No Announcements"
+          description="School announcements will appear here"
         />
       ) : (
         <View style={{ gap: spacing.md }}>
-          {circulars.map((item, index) => (
+          {announcements.map((item, index) => (
             <FadeInView key={item.id} index={Math.min(index, 5)}>
-              <CircularCard item={item} onPress={() => handleOpen(item)} />
+              <AnnouncementCard item={item} onPress={() => handleOpen(item)} />
             </FadeInView>
           ))}
 

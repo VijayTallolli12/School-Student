@@ -133,17 +133,20 @@ export default function NotificationsScreen() {
         grouped.map((group) => (
           <View key={group.label} style={{ marginBottom: spacing.lg }}>
             <Text style={{ ...typeScale.overline, color: colors.textMuted, marginBottom: spacing.sm }}>{group.label}</Text>
-            <View
-              style={{
-                backgroundColor: colors.card,
-                borderRadius: radius["2xl"],
-                borderWidth: 1,
-                borderColor: colors.divider,
-                overflow: "hidden",
-              }}
-            >
+            <View style={{ gap: spacing.md }}>
               {group.data.map((item) => (
-                <NotificationCard key={item.id} item={item} onPress={() => handleOpen(item)} />
+                <View
+                  key={item.id}
+                  style={{
+                    backgroundColor: colors.card,
+                    borderRadius: radius["2xl"],
+                    borderWidth: 1,
+                    borderColor: colors.divider,
+                    overflow: "hidden",
+                  }}
+                >
+                  <NotificationCard item={item} onPress={() => handleOpen(item)} divider={false} />
+                </View>
               ))}
             </View>
           </View>

@@ -47,7 +47,7 @@ export { HomeworkCard } from "./HomeworkCard";
 export { ExamResultCard, ExamSection } from "./ExamCard";
 export type { ExamSectionProps } from "./ExamCard";
 export { FeeSummaryCard, FeeItemCard } from "./FeeCard";
-export { NotificationCard, CircularCard } from "./NotificationCard";
+export { NotificationCard, AnnouncementCard } from "./NotificationCard";
 export { CalendarEventCard, AchievementCard } from "./CalendarCard";
 export type { AchievementItem } from "./CalendarCard";
 export { TransportCard } from "./TransportCard";

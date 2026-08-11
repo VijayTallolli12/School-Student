@@ -33,7 +33,7 @@ export const iconNames = {
   exams: "calendar-clear",
   results: "trophy",
   fees: "wallet",
-  circulars: "megaphone",
+  announcements: "megaphone",
   documents: "folder-open",
   calendar: "calendar-number",
   transport: "bus",

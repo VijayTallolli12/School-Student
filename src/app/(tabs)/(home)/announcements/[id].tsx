@@ -4,8 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTheme, spacing, radius, typeScale } from "@/design-system";
 import { AppContainer, AppHeader, Card, Tag, EmptyState } from "@/design-system/components";
-import { fetchCircularDetail, markCircularRead } from "@/services/api";
-import type { CircularItem } from "@/types";
+import { fetchAnnouncementDetail, markAnnouncementRead } from "@/services/api";
+import type { AnnouncementItem } from "@/types";
 
 const PRIORITY_LABEL: Record<string, string> = {
   urgent: "Urgent",
@@ -35,10 +35,10 @@ function formatDate(dateStr: string): string {
   });
 }
 
-export default function CircularDetailScreen() {
+export default function AnnouncementDetailScreen() {
   const params = useLocalSearchParams<Record<string, string>>();
   const [loading, setLoading] = useState(true);
-  const [detail, setDetail] = useState<CircularItem | null>(null);
+  const [detail, setDetail] = useState<AnnouncementItem | null>(null);
 
   const { colors } = useTheme();
 
@@ -57,7 +57,7 @@ export default function CircularDetailScreen() {
         return;
       }
       try {
-        const data = await fetchCircularDetail(id);
+        const data = await fetchAnnouncementDetail(id);
         setDetail(data);
       } catch {
         setDetail(null);
@@ -71,7 +71,7 @@ export default function CircularDetailScreen() {
   const handleMarkRead = useCallback(async () => {
     if (!id || isRead) return;
     try {
-      await markCircularRead(id);
+      await markAnnouncementRead(id);
     } catch {
       // silently fail
     }
@@ -87,11 +87,11 @@ export default function CircularDetailScreen() {
   if (!id) {
     return (
       <AppContainer>
-        <AppHeader title="Circular" showBack onBack={() => router.back()} />
+        <AppHeader title="Announcement" showBack onBack={() => router.back()} />
         <EmptyState
           icon="megaphone-outline"
-          title="Circular Not Found"
-          description="This circular could not be loaded"
+          title="Announcement Not Found"
+          description="This announcement could not be loaded"
         />
       </AppContainer>
     );
@@ -99,7 +99,7 @@ export default function CircularDetailScreen() {
 
   return (
     <AppContainer>
-      <AppHeader title="Circular" showBack onBack={() => router.back()} />
+      <AppHeader title="Announcement" showBack onBack={() => router.back()} />
 
       {loading ? (
         <View style={{ alignItems: "center", justifyContent: "center", paddingTop: 96 }}>

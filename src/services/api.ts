@@ -13,8 +13,8 @@ import type {
   AssignmentItem,
   AttendanceRecord,
   AttendanceData,
+  AnnouncementItem,
   CalendarEvent,
-  CircularItem,
   DashboardData,
   ExamResultRecord,
   ExamScheduleItem,
@@ -627,31 +627,33 @@ export async function fetchDocuments(_studentUuid: string): Promise<StudentDocum
   return pickArray<StudentDocument>(payload, ["documents", "items", "data"]);
 }
 
-// ─── Circulars / Announcements ────────────────────────────────────
+// ─── Announcements ─────────────────────────────────────────────────
 
-export async function fetchCirculars(page = 1): Promise<{
-  data: CircularItem[];
+export async function fetchAnnouncements(page = 1): Promise<{
+  data: AnnouncementItem[];
   meta: { current_page: number; last_page: number; total: number };
 }> {
   const res = await apiClient.get("/student/circulars", { params: { page } });
-  const body = unwrap<Record<string, unknown>>(res);
-  const meta = pickObject(body, ["meta", "pagination"]) ?? {};
+  const envelope = res.data as ApiResponseEnvelope<Record<string, unknown>> & { meta?: Record<string, unknown> };
+  const raw = envelope?.data;
+  const items = Array.isArray(raw) ? (raw as AnnouncementItem[]) : pickArray<AnnouncementItem>(raw as Record<string, unknown>, ["data", "circulars", "items"]);
+  const meta = envelope?.meta ?? {};
   return {
-    data: pickArray<CircularItem>(body, ["data", "circulars", "items"]),
+    data: items,
     meta: {
       current_page: toNumber(meta.current_page, 1),
       last_page: toNumber(meta.last_page, 1),
-      total: toNumber(meta.total, 0),
+      total: toNumber(meta.total, items.length),
     },
   };
 }
 
-export async function fetchCircularDetail(id: number): Promise<CircularItem> {
+export async function fetchAnnouncementDetail(id: number): Promise<AnnouncementItem> {
   const res = await apiClient.get(`/student/circulars/${id}`);
-  return unwrap<CircularItem>(res);
+  return unwrap<AnnouncementItem>(res);
 }
 
-export async function markCircularRead(id: number): Promise<void> {
+export async function markAnnouncementRead(id: number): Promise<void> {
   await unwrap<void>(await apiClient.post(`/student/circulars/${id}/read`));
 }
 

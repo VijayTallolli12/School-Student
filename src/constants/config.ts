@@ -24,5 +24,5 @@ export const QUERY_KEYS = {
   LEAVE_REQUESTS: "leave-requests",
   CALENDAR: "calendar",
   DOCUMENTS: "documents",
-  CIRCULARS: "circulars",
+  ANNOUNCEMENTS: "announcements",
 } as const;

@@ -257,7 +257,7 @@ export interface LeaveRequestPayload {
   reason: string;
 }
 
-export interface CircularItem {
+export interface AnnouncementItem {
    id: number;
    title: string;
    body: string;

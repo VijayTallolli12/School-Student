@@ -1,13 +1,13 @@
 /**
- * NotificationCard & CircularCard — Design System. List items for
- * notifications and circulars with read/unread styling.
+ * NotificationCard & AnnouncementCard — Design System. List items for
+ * notifications and announcements with read/unread styling.
  */
 import { memo } from "react";
 import { View, Text, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/design-system/theme";
 import { spacing, radius, typeScale } from "@/design-system";
-import type { NotificationItem, CircularItem } from "@/types";
+import type { NotificationItem, AnnouncementItem } from "@/types";
 
 const typeIcon: Record<NotificationItem["type"], keyof typeof Ionicons.glyphMap> = {
   general: "notifications-outline",
@@ -40,9 +40,11 @@ function timeAgo(iso: string): string {
 export const NotificationCard = memo(function NotificationCard({
   item,
   onPress,
+  divider = true,
 }: {
   item: NotificationItem;
   onPress?: () => void;
+  divider?: boolean;
 }) {
   const { colors } = useTheme();
   const colorKey = typeColor[item.type] ?? "info";
@@ -59,7 +61,7 @@ export const NotificationCard = memo(function NotificationCard({
         paddingVertical: spacing.md,
         paddingHorizontal: spacing.lg,
         backgroundColor: item.is_read ? colors.card : `${color}0A`,
-        borderBottomWidth: 1,
+        borderBottomWidth: divider ? 1 : 0,
         borderBottomColor: colors.divider,
         opacity: pressed ? 0.92 : 1,
       })}
@@ -108,11 +110,11 @@ export const NotificationCard = memo(function NotificationCard({
   );
 });
 
-export const CircularCard = memo(function CircularCard({
+export const AnnouncementCard = memo(function AnnouncementCard({
   item,
   onPress,
 }: {
-  item: CircularItem;
+  item: AnnouncementItem;
   onPress?: () => void;
 }) {
   const { colors } = useTheme();
@@ -163,7 +165,7 @@ export const CircularCard = memo(function CircularCard({
             ) : null}
           </View>
           <Text style={{ fontSize: 12, lineHeight: 16, color: colors.textSecondary, marginTop: 2, fontWeight: "500" }}>
-            {item.type_label ?? "Circular"} · {timeAgo(item.sent_at ?? item.created_at)}
+            {item.type_label ?? "Announcement"} · {timeAgo(item.sent_at ?? item.created_at)}
           </Text>
         </View>
       </View>
