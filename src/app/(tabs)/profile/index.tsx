@@ -145,7 +145,7 @@ export default function ProfileScreen() {
       </TouchableOpacity>
 
       <Text style={{ ...typeScale.caption, color: colors.textTertiary, textAlign: "center", marginBottom: spacing.sm }}>
-        OTA TEST ORIGINAL
+        OTA TEST UPDATED
       </Text>
     </AppContainer>
   );
