@@ -41,6 +41,10 @@ yarn-error.*
 /android
 node_modules
 
+# EAS build artifacts
+*.apk
+*.aab
+
 # Freebuff desktop client local state (not part of the project)
 .freebuff/
 

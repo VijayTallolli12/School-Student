@@ -143,6 +143,10 @@ export default function ProfileScreen() {
       >
         <Text style={{ ...typeScale.button, color: colors.error }}>Logout</Text>
       </TouchableOpacity>
+
+      <Text style={{ ...typeScale.caption, color: colors.textTertiary, textAlign: "center", marginBottom: spacing.sm }}>
+        OTA TEST ORIGINAL
+      </Text>
     </AppContainer>
   );
 }
