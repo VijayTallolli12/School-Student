@@ -1,5 +1,5 @@
 import { create, AxiosError, InternalAxiosRequestConfig } from "axios";
-import { API_BASE_URL } from "@/config/api";
+import { API_BASE_URL, getFallbackApiBaseUrl } from "@/config/api";
 import { storage } from "@/utils/storage";
 import { STORAGE_KEYS } from "@/constants/config";
 import { useAuthStore } from "@/store/auth.store";
@@ -40,7 +40,7 @@ type RefreshTokenResponse = {
   expires_in?: number;
 };
 
-type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean; _fallbackAttempted?: boolean };
 
 const apiClient = create({
   baseURL: API_BASE_URL,
@@ -50,6 +50,16 @@ const apiClient = create({
     Accept: "application/json",
   },
 });
+
+let useFallbackApi = false;
+
+function switchToFallbackApi(): void {
+  if (!useFallbackApi) {
+    console.log("[API] Switching to fallback API:", getFallbackApiBaseUrl());
+    apiClient.defaults.baseURL = getFallbackApiBaseUrl();
+    useFallbackApi = true;
+  }
+}
 
 async function resolveToken(): Promise<string | undefined> {
   const secureToken = await getAccessToken();
@@ -174,6 +184,15 @@ apiClient.interceptors.response.use(
       requestUrl.includes("/auth/login") ||
       requestUrl.includes("/auth/refresh") ||
       requestUrl.includes("/auth/logout");
+
+    const isNetworkOrTimeout = isNetworkError(error) || isTimeoutError(error);
+
+    if (isNetworkOrTimeout && config && !config._fallbackAttempted && !useFallbackApi) {
+      config._fallbackAttempted = true;
+      console.log("[API] Network/timeout error, attempting fallback API...");
+      switchToFallbackApi();
+      return apiClient(config);
+    }
 
     if (status === 401 && config && !config._retry && !isAuthEndpoint) {
       config._retry = true;

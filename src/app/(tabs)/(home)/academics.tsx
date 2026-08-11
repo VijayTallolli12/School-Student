@@ -15,7 +15,7 @@ const ACADEMIC_MODULES: {
   { title: "Attendance", subtitle: "Monthly presence report", icon: "calendar-outline", route: "/attendance" },
   { title: "Results", subtitle: "Recent marks and grades", icon: "trophy-outline", route: "/results" },
   { title: "Circulars", subtitle: "School announcements", icon: "megaphone-outline", route: "/circulars" },
-  { title: "Study Materials", subtitle: "Documents and resources", icon: "folder-open-outline", route: "/documents" },
+  { title: "Student Documents", subtitle: "Documents and resources", icon: "folder-open-outline", route: "/documents" },
   { title: "Exam Schedule", subtitle: "Upcoming exam dates", icon: "calendar-clear-outline", route: "/exam-schedule" },
   { title: "Assignments", subtitle: "Tasks and due dates", icon: "clipboard-outline", route: "/assignments" },
   { title: "Calendar", subtitle: "Events and holidays", icon: "calendar-number-outline", route: "/calendar" },
