@@ -40,3 +40,7 @@ yarn-error.*
 /ios
 /android
 node_modules
+
+# Freebuff desktop client local state (not part of the project)
+.freebuff/
+
